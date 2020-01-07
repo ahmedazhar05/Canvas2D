@@ -7,6 +7,7 @@ let prop;
 let sel;
 let temp;
 let drawn;
+let mag;
 
 function setup() {
   sel = null;
@@ -14,6 +15,8 @@ function setup() {
   pts = 0;
   shapes = {};
   drawn = [];
+  temp = [];
+  mag = 0;
   options = {
     "Show Grid" : {enabled : false, func : 'showGrid'},
     "Show Ruler" : {enabled : false, func : 'showRuler'},
@@ -95,9 +98,9 @@ function showGrid(){
   noFill();
   strokeWeight(1);
   for(let i = 10, inc = i; i < prop.canvasH; i += inc){
-    stroke(0,150);
+    stroke(0,100);
     if(i % 50 === 0)
-      stroke(0,240);
+      stroke(0,200);
     line(1, i + prop.canvasY, prop.width, i + prop.canvasY);
     line(i, prop.canvasY, i, prop.canvasH + prop.canvasY);
   }
@@ -196,63 +199,68 @@ function showAnnotation(){
 }
 
 function mousePressed(){
-  if(mouseY > prop.toolBarY && mouseY < prop.toolBarY + prop.toolBarH){
-    if(!sel){
-      sel=Object.keys(tools)[floor(mouseX/prop.toolGap)];
-      pts=tools[sel].length;
-      ann=(tools[sel])[pts-1];
-    } else {
+  if(mouseY >= prop.toolBarY && mouseY <= prop.toolBarY + prop.toolBarH){
+    let ind = floor(mouseX/prop.toolGap);
+    if(sel == Object.keys(tools)[ind]){
       sel = null;
       pts = 0;
       ann = null;
+      drawn = [];
+    } else {
+      sel=Object.keys(tools)[ind];
+      pts=tools[sel].length;
+      ann=(tools[sel])[pts-1];
     }
-  } else if(mouseY > prop.optionsBarY && mouseY < prop.optionsBarY+prop.optionsBarH){
+  } else if(mouseY >= prop.optionsBarY && mouseY <= prop.optionsBarY+prop.optionsBarH){
     let opt = Object.keys(options)[floor(mouseX/prop.optionsGap)];
     options[opt].enabled = !options[opt].enabled;
-  } else if(mouseY > prop.canvasY && mouseY < prop.canvasY+prop.canvasH && sel){
-    temp = createVector(mouseX, mouseY);
+  } else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel){
+    makeParam(true);
   }
 }
 
 function mouseReleased(){
-  if(mouseX > 0 && mouseX < width && mouseY > prop.canvasY && mouseY < prop.canvasY+prop.canvasH && sel){
-    paramSett(false);
+  if(mouseX >= 0 && mouseX <= prop.width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel){
+    makeParam(false);
     --pts;
-    modulus = 0;
     ann=(tools[sel])[pts-1];
+    mag = 0;
     if(!pts){
       if(typeof(shapes[sel]) == 'undefined')
         shapes[sel] = [];
       shapes[sel].push(drawn);
       drawn = [];
       sel=null;
+      ann=null;
     }
     temp=null;
   }
 }
 
 function mouseDragged(){
-  if(mouseX > 0 && mouseX < width && mouseY > prop.canvasY && mouseY < prop.canvasY+prop.canvasH && sel){
-    temp = createVector(mouseX, mouseY);
-    paramSett(true);
+  if(mouseX >= 0 && mouseX <= width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel){
+    makeParam(true);
   }
 }
 
-function paramSett(bool){
+function makeParam(bool){
+  temp = [mouseX, mouseY];
+  mag = 0;
   if(sel == 'Circle' && pts == 1){
-    modulus = dist(drawn[drawn.length-2], drawn[drawn.length-1], temp.x, temp.y) * 2;
+    mag = dist(drawn[drawn.length-2], drawn[drawn.length-1], temp[0], temp[1]) * 2;
   }
-  if(modulus){
-    if(bool)
-      drawn.pop();
-    drawn.push(modulus);
+  
+}
+
+/*function preview(){
+  if(mag){
+    drawn.pop();
+    drawn.push(mag);
   }
   else{
-    if(bool){
-      drawn.pop();
-      drawn.pop();
-    }
-    drawn.push(temp.x);
-    drawn.push(temp.y);
+    drawn.pop();
+    drawn.pop();
+    drawn.concat(temp);
   }
-}
+  console.log(drawn);
+}*/
