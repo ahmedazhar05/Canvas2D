@@ -308,6 +308,7 @@ function mousePressed(){
         content.push(s.toLowerCase()+"("+ob.reduce((sum,x) => sum +", "+ x.toString())+");");
     }
     save(content, options["Export As"].param.slice(0,-1)+'.txt');
+    options["Export As"].enabled = false;
   } else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && pts == 1){
     makeParam(false);
   }
@@ -347,5 +348,6 @@ function keyPressed(){
         content.push(s.toLowerCase()+"("+ob.reduce((sum,x) => sum +", "+ x.toString())+");");
     }
     save(content, options["Export As"].param.slice(0,-1)+'.txt');
+    options["Export As"].enabled = false;
   }
 }
