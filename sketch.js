@@ -9,7 +9,6 @@ let temp;
 let lastpt;
 let params;
 let mag;
-//let currPts;
 
 function setup() {
   sel = null;
@@ -23,11 +22,12 @@ function setup() {
   dPts = [];
   drawn=[];
   options = {
-    "Show Grid" : {enabled : true, func : 'showGrid'},
-    "Show Ruler" : {enabled : true, func : 'showRuler'},
+    "Show Grid" : {enabled : false, func : 'showGrid'},
+    "Show Ruler" : {enabled : false, func : 'showRuler'},
+    "Export As" : {enabled : false, param : ''},
   };
   tools={
-    "Arc":['bend', 'end point', 'start point'],
+    // "Arc":['bend', 'end point', 'start point'],
     "Ellipse":['vertical extent', 'horizontal extent','center'],
     "Circle":['radius','center'],
     "Line":['point','point'],
@@ -38,13 +38,14 @@ function setup() {
     "Triangle":['point','point','point'],
   };
   prop = {
-    width : 600 - 2,
+    width : windowWidth - 2,
     toolBarH : 40,
     toolBarY : 0,
     statusBarH : 30,
     optionsBarH : 40,
   };
-  prop.canvasH = prop.width + 2;
+  //prop.canvasH = prop.width + 2;
+  prop.canvasH = windowHeight - prop.toolBarH - prop.statusBarH - prop.optionsBarH;
   prop.optionsBarY = prop.toolBarY + prop.toolBarH;
   prop.canvasY = prop.optionsBarH + prop.optionsBarY;
   prop.statusBarY = prop.canvasY + prop.canvasH;
@@ -68,7 +69,7 @@ function draw() {
   rect(1, prop.canvasY, prop.width +1, prop.canvasH);//canvas
 
   for(let opt in options){
-    if(options[opt].enabled)
+    if(options[opt].enabled && typeof(window[options[opt].func]) != 'undefined')
       window[options[opt].func].apply(this);
   }
 
@@ -77,12 +78,13 @@ function draw() {
     point(drawn[i], drawn[i+1]);
   }
 
-  if(sel)
+  if(sel && !options["Export As"].enabled)
     ellipse(mouseX, mouseY, 10);
 
   //Show Shapes and Vertices
   push();
   rectMode(CORNERS);
+  strokeWeight(2);
   //Preview
   if(lastpt.length)
     window[sel.toLowerCase()].apply(this, params.concat(lastpt));
@@ -98,18 +100,26 @@ function draw() {
   showToolBar();
   showOptionsBar();
   showAnnotation();
+  if(options["Export As"].enabled)
+    exportFile(options["Export As"].param);
+  else
+    options["Export As"].param = '';
 }
 
 function showGrid(){
   push();
   noFill();
   strokeWeight(1);
-  for(let i = 10, inc = i; i < prop.canvasH; i += inc){
+  let lim = (prop.canvasH > prop.width)?prop.canvasH : prop.width;
+  for(let i = 10, inc = i; i < lim; i += inc){
     stroke(0,100);
+    strokeWeight(0.75);
     if(i % 50 === 0)
       stroke(0,200);
-    line(1, i + prop.canvasY, prop.width, i + prop.canvasY);
-    line(i, prop.canvasY, i, prop.canvasH + prop.canvasY);
+    if(i < prop.canvasH)
+      line(1, i + prop.canvasY, prop.width, i + prop.canvasY);
+    if(i < prop.width)
+      line(i, prop.canvasY, i, prop.canvasH + prop.canvasY);
   }
   pop();
 }
@@ -148,6 +158,72 @@ function showRuler(){
   pop();
 }
 
+function exportFile(name){
+  push();
+  rectMode(CENTER);
+  textAlign(LEFT, BASELINE);
+  textSize(22);
+  stroke(0,100);
+  strokeWeight(10);
+  rect(width/2+8, height/2+8, 370, 170);//shadow
+  stroke(255, 0, 0);
+  strokeWeight(2);
+  fill(255);
+  rect(width/2, height/2, 375, 175);//Dialog
+  stroke(0);
+  strokeWeight(0.5);
+  fill(235);
+  rect(width/2 - 20, height/2, 260, 35);//Textbox
+  fill(0);
+  text("Enter Filename :", width/2 - 150, height/2 - 35);
+  text(".txt", width/2 + 120, height/2 + 7);
+  text(name, width/2 - 145, height/2 + 7);
+  fill(119, 204, 92);//Green
+  rect(width/2 + 100, height/2 + 50, 100, 35, 5);//Save Button
+  fill(255);
+  stroke(255);
+  text("SAVE", width/2 + 70, height/2 + 57);
+  pop();
+}
+
+function makeParam(bool){
+  temp = [mouseX, mouseY];
+  mag = [];
+  switch(sel){
+    case 'Circle':
+      if(pts == 1)
+        mag.push(dist(params[0], params[1], temp[0], temp[1]) * 2);
+      break;
+    case 'Ellipse':
+      if (pts == 2){
+        mag.push((temp[0] - params[0])*2);
+        temp[1] = params[1];
+      }
+      else if (pts == 1){
+        mag.push((temp[1] - params[1])*2);
+        temp[0] = params[0];
+      }
+      break;
+    // case 'Arc':
+    //   break;
+  }
+  if(bool && pts > 1){
+    params = params.concat((mag.length)?mag:temp);
+    drawn = drawn.concat(temp);
+  }
+  else
+    lastpt = (mag.length)?mag:temp;
+  /*if(sel == 'Circle' && pts == 1){
+    mag.push(dist(params[0], params[1], temp[0], temp[1]) * 2);
+  } else if(sel == 'Ellipse'){
+    if(pts == 2)
+      mag.push((temp[0] - params[0])*2);
+    else if(pts == 1)
+      mag.push((temp[1] - params[1])*2);
+  } else
+    currPts = currPts.concat(temp);*/
+}
+
 function showToolBar(){
   push();
   strokeWeight(1);
@@ -181,17 +257,18 @@ function showOptionsBar(){
 function showStatusBar(){
   push();
   strokeWeight(1);
+  textAlign(LEFT, CENTER);
   stroke(0);
   fill(220);
   rect(1, prop.statusBarY, prop.width, prop.statusBarH);
   fill(0)
   if(sel)
-    text(sel+" has "+pts+" point"+((pts>1)?'s ':' ')+'left', width/2, prop.statusBarY + prop.statusBarH/2);
+    text(sel+" has "+pts+" point"+((pts>1)?'s ':' ')+'left', 10, prop.statusBarY + prop.statusBarH/2);
   pop();
 }
 
 function showAnnotation(){
-  if(sel && mouseX > 0 && mouseX < width && mouseY > prop.canvasY+1 && mouseY < prop.canvasY+prop.canvasH-1){
+  if(sel && mouseX > 0 && mouseX < width && mouseY > prop.canvasY+1 && mouseY < prop.canvasY+prop.canvasH-1 && !options["Export As"].enabled){
     push();
     fill(0);
     const w = ann.length * 9;
@@ -221,6 +298,13 @@ function mousePressed(){
   } else if(mouseY >= prop.optionsBarY && mouseY <= prop.optionsBarY+prop.optionsBarH){
     let opt = Object.keys(options)[floor(mouseX/prop.optionsGap)];
     options[opt].enabled = !options[opt].enabled;
+  } else if(mouseX>=width/2+50 && mouseX<=width/2+150 && mouseY>=height/2+32.5 && mouseY<=height/2+67.5 && options["Export As"].enabled && options["Export As"].param){
+    let content = ["//Generated by Canvas2D at https://ahmedazhar05.github.io/Canvas2D\n","rectMode(CORNERS);","ellipseMode(CENTER);"];
+    for(let s in shapes){
+      for(let ob of shapes[s])
+        content.push(s.toLowerCase()+"("+ob.reduce((sum,x) => sum +", "+ x.toString())+");");
+    }
+    save(content, options["Export As"].param+'.txt');
   } else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && pts == 1){
     makeParam(false);
   }
@@ -248,40 +332,17 @@ function mouseDragged(){
   }
 }
 
-function makeParam(bool){
-  temp = [mouseX, mouseY];
-  mag = [];
-  switch(sel){
-    case 'Circle':
-      if(pts == 1)
-        mag.push(dist(params[0], params[1], temp[0], temp[1]) * 2);
-      break;
-    case 'Ellipse':
-      if (pts == 2){
-        mag.push((temp[0] - params[0])*2);
-        temp[1] = params[1];
-      }
-      else if (pts == 1){
-        mag.push((temp[1] - params[1])*2);
-        temp[0] = params[0];
-      }
-      break;
-    case 'Arc':
-      break;
+function keyPressed(){
+  if(options["Export As"].enabled && (keyCode>=65 && keyCode<=90 || keyCode>=48 && keyCode<=57 || keyCode>=96 && keyCode<=105 || key=='-' || key=='_'))
+    options["Export As"].param += key;
+  else if(options["Export As"].enabled && keyCode == 8)
+    options["Export As"].param = options["Export As"].param.slice(0,-1);
+  else if(options["Export As"].enabled && options["Export As"].param && keyCode == 13){
+    let content = ["//Generated by Canvas2D at https://ahmedazhar05.github.io/Canvas2D\n","rectMode(CORNERS);","ellipseMode(CENTER);"];
+    for(let s in shapes){
+      for(let ob of shapes[s])
+        content.push(s.toLowerCase()+"("+ob.reduce((sum,x) => sum +", "+ x.toString())+");");
+    }
+    save(content, options["Export As"].param+'.txt');
   }
-  if(bool && pts > 1){
-    params = params.concat((mag.length)?mag:temp);
-    drawn = drawn.concat(temp);
-  }
-  else
-    lastpt = (mag.length)?mag:temp;
-  /*if(sel == 'Circle' && pts == 1){
-    mag.push(dist(params[0], params[1], temp[0], temp[1]) * 2);
-  } else if(sel == 'Ellipse'){
-    if(pts == 2)
-      mag.push((temp[0] - params[0])*2);
-    else if(pts == 1)
-      mag.push((temp[1] - params[1])*2);
-  } else
-    currPts = currPts.concat(temp);*/
 }
