@@ -6,29 +6,35 @@ let options;
 let prop;
 let sel;
 let temp;
-let drawn;
+let lastpt;
+let params;
 let mag;
+//let currPts;
 
 function setup() {
   sel = null;
   ann = null;
   pts = 0;
   shapes = {};
-  drawn = [];
+  params = [];
   temp = [];
-  mag = 0;
+  mag = [];
+  lastpt=[];
+  dPts = [];
+  drawn=[];
   options = {
-    "Show Grid" : {enabled : false, func : 'showGrid'},
-    "Show Ruler" : {enabled : false, func : 'showRuler'},
+    "Show Grid" : {enabled : true, func : 'showGrid'},
+    "Show Ruler" : {enabled : true, func : 'showRuler'},
   };
   tools={
-    "Ellipse":['vertical extent','horizontal extent','center'],
+    "Arc":['bend', 'end point', 'start point'],
+    "Ellipse":['vertical extent', 'horizontal extent','center'],
     "Circle":['radius','center'],
     "Line":['point','point'],
     "Point":['point'],
     "Quad":['point','point','point','point'],
     "Rect":['opposite corner','corner'],
-    "Square":['opposite corner','corner'],
+    //"Square":['opposite corner','corner'],
     "Triangle":['point','point','point'],
   };
   prop = {
@@ -74,22 +80,23 @@ function draw() {
   if(sel)
     ellipse(mouseX, mouseY, 10);
 
-  /*for(let s in shapes){
-    for(let ob of shapes[s]){
-      push();
-      rectMode(CORNERS);
-      ellipseMode(CORNERS);
+  //Show Shapes and Vertices
+  push();
+  rectMode(CORNERS);
+  //Preview
+  if(lastpt.length)
+    window[sel.toLowerCase()].apply(this, params.concat(lastpt));
+
+  for(let s in shapes){
+    for(let ob of shapes[s])
       window[s.toLowerCase()].apply(this, ob);
-      pop();
-    }
-  }*/
+  }
+  pop();
 
+  //Show Various Bar
   showStatusBar();
-  
   showToolBar();
-
   showOptionsBar();
-
   showAnnotation();
 }
 
@@ -202,65 +209,79 @@ function mousePressed(){
   if(mouseY >= prop.toolBarY && mouseY <= prop.toolBarY + prop.toolBarH){
     let ind = floor(mouseX/prop.toolGap);
     if(sel == Object.keys(tools)[ind]){
-      sel = null;
+      sel = ann = null;
       pts = 0;
-      ann = null;
-      drawn = [];
+      params = drawn = [];
     } else {
       sel=Object.keys(tools)[ind];
       pts=tools[sel].length;
       ann=(tools[sel])[pts-1];
+      params = drawn = [];
     }
   } else if(mouseY >= prop.optionsBarY && mouseY <= prop.optionsBarY+prop.optionsBarH){
     let opt = Object.keys(options)[floor(mouseX/prop.optionsGap)];
     options[opt].enabled = !options[opt].enabled;
-  } else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel){
-    makeParam(true);
+  } else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && pts == 1){
+    makeParam(false);
   }
 }
 
 function mouseReleased(){
   if(mouseX >= 0 && mouseX <= prop.width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel){
-    makeParam(false);
+    makeParam(true);
     --pts;
-    ann=(tools[sel])[pts-1];
-    mag = 0;
+    ann = (tools[sel])[pts-1];
     if(!pts){
       if(typeof(shapes[sel]) == 'undefined')
         shapes[sel] = [];
-      shapes[sel].push(drawn);
-      drawn = [];
-      sel=null;
-      ann=null;
+      shapes[sel].push(params.concat(lastpt));
+      params = lastpt = drawn = [];
+      sel = ann = null;
     }
-    temp=null;
+    mag = temp = [];
   }
 }
 
 function mouseDragged(){
-  if(mouseX >= 0 && mouseX <= width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel){
-    makeParam(true);
+  if(mouseX >= 0 && mouseX <= width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && pts == 1){
+    makeParam(false);
   }
 }
 
 function makeParam(bool){
   temp = [mouseX, mouseY];
-  mag = 0;
-  if(sel == 'Circle' && pts == 1){
-    mag = dist(drawn[drawn.length-2], drawn[drawn.length-1], temp[0], temp[1]) * 2;
+  mag = [];
+  switch(sel){
+    case 'Circle':
+      if(pts == 1)
+        mag.push(dist(params[0], params[1], temp[0], temp[1]) * 2);
+      break;
+    case 'Ellipse':
+      if (pts == 2){
+        mag.push((temp[0] - params[0])*2);
+        temp[1] = params[1];
+      }
+      else if (pts == 1){
+        mag.push((temp[1] - params[1])*2);
+        temp[0] = params[0];
+      }
+      break;
+    case 'Arc':
+      break;
   }
-  
+  if(bool && pts > 1){
+    params = params.concat((mag.length)?mag:temp);
+    drawn = drawn.concat(temp);
+  }
+  else
+    lastpt = (mag.length)?mag:temp;
+  /*if(sel == 'Circle' && pts == 1){
+    mag.push(dist(params[0], params[1], temp[0], temp[1]) * 2);
+  } else if(sel == 'Ellipse'){
+    if(pts == 2)
+      mag.push((temp[0] - params[0])*2);
+    else if(pts == 1)
+      mag.push((temp[1] - params[1])*2);
+  } else
+    currPts = currPts.concat(temp);*/
 }
-
-/*function preview(){
-  if(mag){
-    drawn.pop();
-    drawn.push(mag);
-  }
-  else{
-    drawn.pop();
-    drawn.pop();
-    drawn.concat(temp);
-  }
-  console.log(drawn);
-}*/
