@@ -52,6 +52,7 @@ function setup() {
     optionsBarH : 40,
   };
   prop.canvasH = windowHeight - prop.toolBarH - prop.statusBarH - prop.optionsBarH;
+  createCanvas(prop.width + 2, prop.toolBarH + prop.statusBarH + prop.canvasH + prop.optionsBarH);
   prop.optionsBarY = prop.toolBarY + prop.toolBarH;
   prop.canvasY = prop.optionsBarH + prop.optionsBarY;
   prop.statusBarY = prop.canvasY + prop.canvasH;
@@ -59,7 +60,6 @@ function setup() {
   prop.optionsGap = width / Object.keys(options).length;
 
   //global setting
-  createCanvas(prop.width + 2, prop.toolBarH + prop.statusBarH + prop.canvasH + prop.optionsBarH);
   textAlign(CENTER, CENTER);
   textSize(15);
   noStroke();
