@@ -10,6 +10,7 @@ let lastpt; //stores the last clicked point of the object
 let params;   //stores realtime parameters of the object thats currently being made
 let mag;  //store magnitude of temp with other object points as parameter if required
 let drawn;  //stores  realtime coordinates of the object thats currently being made not parameters
+let saved;  //shapes exported/saved so far
 
 /*
   parameters here are the shapes's function parameters required to create the shape
@@ -20,6 +21,8 @@ function setup() {
   sel = ann = null;
   pts = 0;
   params = temp = mag = lastpt = drawn = [];
+
+  saved=0;
 
   //stores all the user created shapes
   shapes = [];
@@ -111,12 +114,14 @@ function draw() {
 
   //displays all other created shapes
   for(let s of shapes){
-    if(s[0]=="Pencil"){
+    if(s[0]=="Pencil" && s.length > 3){
       beginShape();
       for(let i=1;i<s.length;i+=2)
         vertex(s[i], s[i+1]);
       endShape();
     }
+    else if(s[0]=="Pencil")
+      s[0]="Point";
     else{
       let tmp = s.slice();
       window[tmp.shift().toLowerCase()].apply(this, tmp);
@@ -387,6 +392,7 @@ function mousePressed(){
       }
     }
     save(content, options["Export As"].param.slice(0,-1)+'.txt');
+    saved=shapes.length;
     options["Export As"].enabled = false;
   }
   else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil")
@@ -460,6 +466,7 @@ function keyPressed(){
         }
       }
       save(content, options["Export As"].param.slice(0,-1)+'.txt');
+      saved=shapes.length;
       options["Export As"].enabled = false;
     }
   }
@@ -468,6 +475,9 @@ function keyPressed(){
   }
 }
 
-window.onbeforeunload = function(e) {
-    return 'Export Canvas before closing else all data will be lost.';
-};
+window.addEventListener('beforeunload', (event) => {
+  if(saved < shapes.length){
+    event.preventDefault();
+    event.returnValue = false;
+  }
+});
