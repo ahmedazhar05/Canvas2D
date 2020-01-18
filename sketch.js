@@ -18,8 +18,11 @@ let saved;  //shapes exported/saved so far
 */
 
 function setup() {
-  sel = ann = null;
-  pts = 0;
+  sel="Pencil";
+  pts=-1;
+  ann="point";
+  // sel = ann = null;
+  // pts = 0;
   params = temp = mag = lastpt = drawn = [];
 
   saved=0;
@@ -31,7 +34,8 @@ function setup() {
   options = {
     "Show Grid" : {enabled : false, func : 'showGrid'},
     "Show Ruler" : {enabled : false, func : 'showRuler'},
-    "Non Stop" : {enabled : false},
+    "Non Stop" : {enabled : true},
+    "Show Annotation" : {enabled : true},
     "Export As" : {enabled : false, param : '|'},//prestores blinking line
   };
 
@@ -135,7 +139,8 @@ function draw() {
   showOptionsBar();
 
   //Shows Annotations
-  showAnnotation();
+  if(options["Show Annotation"].enabled)
+    showAnnotation();
 
   //Shows Export Dialog Box if Enabled
   if(options["Export As"].enabled)
@@ -186,10 +191,9 @@ function showRuler(){
   rect(1, bY + 1, prop.width, thick);
   fill(0);
   noStroke();
-  const off = 2;//text displacement offset
   for(let i=50;i<prop.width;i+=50){
-    text(int(i/10), i-off, bY+thick/2);
-    text(int(i/10), bX+thick/2, i-off+cY+1);
+    text(int(i/10), i, bY+thick/2);
+    text(int(i/10), bX+thick/2, i+cY+1);
   }
   stroke(0);
   fill(255);
@@ -307,7 +311,7 @@ function showOptionsBar(){
   stroke(0);
   for(let i = 0; i < Object.keys(options).length; i++){
     fill(255);
-    if(options[Object.keys(options)[i]].enabled)
+    if(Object.values(options)[i].enabled)
       fill(220);  //if selected then highlight it
     rect(i * prop.optionsGap + 1, prop.optionsBarY, prop.optionsGap - 1, prop.optionsBarH);
     fill(0);
@@ -382,7 +386,7 @@ function mousePressed(){
       }
       else{
         let tmp = s.slice();
-        content.push(tmp.shift().toLowerCase()+"("+tmp.reduce((sum,x) => sum +", "+ x.toString())+");");
+        content.push(tmp.shift().toLowerCase()+"("+tmp.reduce((sum,x) => sum +", "+ abs(x.toString()))+");");
       }
     }
     save(content, options["Export As"].param.slice(0,-1)+'.txt');
@@ -456,7 +460,7 @@ function keyPressed(){
         }
         else{
           let tmp = s.slice();
-          content.push(tmp.shift().toLowerCase()+"("+tmp.reduce((sum,x) => sum +", "+ x.toString())+");");
+          content.push(tmp.shift().toLowerCase()+"("+tmp.reduce((sum,x) => sum +", "+ abs(x.toString()))+");");
         }
       }
       save(content, options["Export As"].param.slice(0,-1)+'.txt');
