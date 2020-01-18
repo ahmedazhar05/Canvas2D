@@ -39,7 +39,7 @@ function setup() {
   tools={
     "Pencil":['raw'],
     // "Arc":['bend', 'end point', 'start point'],
-    "Ellipse":['vertical extent', 'horizontal extent','center'],
+    "Ellipse":['shape','center'],
     "Circle":['radius','center'],
     "Line":['point','point'],
     "Point":['point'],
@@ -94,8 +94,8 @@ function draw() {
   }
 
   //displays a circle highlighting mouse pointer on canvas
-  if(sel!="Pencil" && sel && !options["Export As"].enabled)
-    ellipse(mouseX, mouseY, 10);
+  // if(sel!="Pencil" && sel && !options["Export As"].enabled)
+  //   ellipse(mouseX, mouseY, 10);
 
   //Shows Shapes and Vertices
   push();
@@ -114,7 +114,7 @@ function draw() {
 
   //displays all other created shapes
   for(let s of shapes){
-    if(s[0]=="Pencil" && s.length > 3){
+    if((s[0]=="Pencil" || s[0]=="Polygon") && s.length > 3){
       beginShape();
       for(let i=1;i<s.length;i+=2)
         vertex(s[i], s[i+1]);
@@ -262,17 +262,11 @@ function makeParam(bool){
         mag.push(dist(params[0], params[1], temp[0], temp[1]) * 2);
       break;
     case 'Ellipse':
-      if (pts == 2){
-        mag.push((temp[0] - params[0])*2);
-        temp[1] = params[1];
-      }
-      else if (pts == 1){
-        mag.push((temp[1] - params[1])*2);
-        temp[0] = params[0];
+      if (pts == 1){
+        mag.push((temp[0] - params[0])*sqrt(8));
+        mag.push((temp[1] - params[1])*sqrt(8));
       }
       break;
-    // case 'Arc':
-    //   break;
   }
   if(sel=="Pencil"){
     if(bool)
