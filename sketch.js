@@ -20,7 +20,7 @@ let saved;  //shapes exported/saved so far
 function setup() {
   sel="Pencil";
   pts=-1;
-  ann="point";
+  ann="raw";
   // sel = ann = null;
   // pts = 0;
   params = temp = mag = lastpt = drawn = [];
@@ -42,7 +42,7 @@ function setup() {
   //stores all the point coordinate description to help user
   tools={
     "Pencil":['raw'],
-    // "Arc":['bend', 'end point', 'start point'],
+    "Bezier":['last pull point','first pull point','end point','start point'],
     "Ellipse":['shape','center'],
     "Circle":['radius','center'],
     "Line":['point','point'],
@@ -97,9 +97,9 @@ function draw() {
     point(drawn[i], drawn[i+1]);
   }
 
-  //displays a circle highlighting mouse pointer on canvas
-  // if(sel!="Pencil" && sel && !options["Export As"].enabled)
-  //   ellipse(mouseX, mouseY, 10);
+  //displays a circle highlighting mouse pointer click event on canvas
+  if(mouseIsPressed && !options["Export As"].enabled && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH)
+    ellipse(mouseX, mouseY, 10);
 
   //Shows Shapes and Vertices
   push();
@@ -107,7 +107,9 @@ function draw() {
   strokeWeight(2);
 
   //Shows Preview of (to be created) object
-  if(lastpt.length)
+  if (lastpt.length && sel=="Bezier")
+    window[sel.toLowerCase()].apply(this, params.slice(0, 2).concat(drawn.slice(4), lastpt, params.slice(2, 4)));
+  else if(lastpt.length)
     window[sel.toLowerCase()].apply(this, params.concat(lastpt));
   if(sel == "Pencil" && drawn.length > 0){
     beginShape();
@@ -271,13 +273,19 @@ function makeParam(bool){
         mag.push((temp[1] - params[1])*sqrt(8));
       }
       break;
+    case 'Bezier':
+      if(pts == 1 && bool){
+        params = params.concat(temp);
+        lastpt = params.splice(2, 2);
+        return;
+      }
   }
   if(sel=="Pencil"){
     if(bool)
       drawn = drawn.concat(temp);
   }
   //once mag[] is set then it gets appended to parameter list (i.e params[]) instead of temp[]
-  //temp[] gets appended to drawn[] for user-drawn points to be displayed
+  //temp[] gets appended to drawn[] for user-drawn points to be displayed at each step
   else if(bool && pts > 1){
     params = params.concat((mag.length)?mag:temp);
     drawn = drawn.concat(temp);
