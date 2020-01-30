@@ -267,9 +267,11 @@ function showHelp(ind){
   stroke(0, 55, 200).strokeWeight(2).fill(255);
   rect(width/2 - wid/2, height/2 - wid/2 - 40, wid, wid + 40);//Rectangle Dialog Box
   fill(0).stroke(255);
-  let margin = 20;
+  const margin = 20;
+  textSize(25);
   text("HELP", width/2, height/2 - wid/2 - ((margin + 40)/2 - margin));
-  let space = (wid - 20 - 20)/tabs;
+  const space = (wid - 20 - 20)/tabs;
+  const innerMargin = 50;
   stroke(0);
   textSize(18);
   translate(width/2 - wid/2, height/2 - wid/2);
@@ -284,11 +286,16 @@ function showHelp(ind){
     text(helps[i], margin + space/2 + i * space, margin + 30 * 0.5);
   }
   fill(255).stroke(0);
-  rect(margin, margin + 30, 500 - 20 - 20, 500 - 20 - 20 - 30);
+  rect(margin, margin + 30, wid - 20 - 20, wid - 20 - 20 - 30);
   stroke(255).strokeCap(SQUARE);
   line(ind*space + margin + 1, margin + 30, ind*space + margin + space - 1, margin + 30);
 
-
+  //Content
+  fetch('./Desc.txt')
+  .then(response => response.text())
+  .then((data) => {
+    //console.log(data);
+  });
 
   pop();
 }
