@@ -11,6 +11,7 @@ let params;   //stores realtime parameters of the object thats currently being m
 let mag;  //store magnitude of temp with other object points as parameter if required
 let drawn;  //stores  realtime coordinates of the object thats currently being made not parameters
 let saved;  //shapes exported/saved so far
+let drawable; //determines if user can draw on canvas or not
 
 /*
   parameters here are the shapes's function parameters required to create the shape
@@ -18,6 +19,7 @@ let saved;  //shapes exported/saved so far
 */
 
 function setup() {
+  drawable = true;
   sel="Pencil";
   pts=-1;
   ann="raw";
@@ -32,11 +34,12 @@ function setup() {
 
   //stores various options with parameters
   options = {
+    "Non Stop" : {enabled : true, func : 'voidfunc'},
     "Show Grid" : {enabled : false, func : 'showGrid'},
     "Show Ruler" : {enabled : false, func : 'showRuler'},
-    "Non Stop" : {enabled : true},
-    "Show Annotation" : {enabled : true},
-    "Export As" : {enabled : false, param : '|'},//prestores blinking line
+    "Show Annotation" : {enabled : true, func : 'showAnnotation'},
+    "Help" : {enabled : true, func : 'showHelp', param : [1]},
+    "Export As" : {enabled : false, func : 'exportFile', param : ['|']},//prestores blinking line
   };
 
   //stores all the point coordinate description to help user
@@ -76,6 +79,8 @@ function setup() {
 
 function draw() {
 
+  let op = 0;
+
   background(255);
 
   strokeWeight(1);
@@ -85,10 +90,12 @@ function draw() {
   //Canvas
   rect(1, prop.canvasY, prop.width +1, prop.canvasH);
 
-  //Calls Option specific functions when enabled stored as object name `func`
+  //Calls Option-specific-functions stored as object name `func` and parameters stored as `param`
   for(let opt in options){
-    if(options[opt].enabled && typeof(window[options[opt].func]) != 'undefined')
-      window[options[opt].func].apply(this);
+    if(options[opt].enabled)
+      window[options[opt].func].apply(this, options[opt].param);
+    if (++op == 2)//number of options on optionsbar from left that will be displayed under the canvas
+      break;
   }
 
   //displays user drawn points on the canvas in order to create objects/shapes
@@ -98,7 +105,7 @@ function draw() {
   }
 
   //displays a circle highlighting mouse pointer click event on canvas
-  if(mouseIsPressed && !options["Export As"].enabled && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH)
+  if(mouseIsPressed && !options["Export As"].enabled && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && drawable)
     ellipse(mouseX, mouseY, 10);
 
   //Shows Shapes and Vertices
@@ -140,15 +147,13 @@ function draw() {
   showToolBar();
   showOptionsBar();
 
-  //Shows Annotations
-  if(options["Show Annotation"].enabled)
-    showAnnotation();
-
-  //Shows Export Dialog Box if Enabled
-  if(options["Export As"].enabled)
-    exportFile(options["Export As"].param); //displays dialog box
-  else
-    options["Export As"].param = '|'; //resets filename
+  //Calls Option-specific-functions stored as object name `func` and parameters stored as `param`
+  for(let opt in options){
+    if(--op >= 0)
+      continue;
+    if(options[opt].enabled)
+      window[options[opt].func].apply(this, options[opt].param);
+  }
 }
 
 //This Function shows Grid on Canvas which gets called
@@ -214,20 +219,16 @@ function showRuler(){
   parameter `name` represents the filename typed in the input box.
 */
 function exportFile(name){
+  drawable=false;
   push();
   rectMode(CENTER);
   textAlign(LEFT, BASELINE);
   textSize(22);
-  stroke(0,100);
-  strokeWeight(10);
+  stroke(0,100).strokeWeight(10);
   rect(width/2+8, height/2+8, 370, 170);//box shadow
-  stroke(255, 0, 0);
-  strokeWeight(2);
-  fill(255);
+  stroke(255, 0, 0).strokeWeight(2).fill(255);
   rect(width/2, height/2, 375, 175);//Rectangle Dialog Box
-  stroke(0);
-  strokeWeight(0.5);
-  fill(235);
+  stroke(0).strokeWeight(0.5).fill(235);
   rect(width/2 - 20, height/2, 260, 35);//Text input box
   fill(0);
   text("Enter Filename :", width/2 - 150, height/2 - 35);
@@ -242,9 +243,53 @@ function exportFile(name){
 
   fill(119, 204, 92);//Green
   rect(width/2 + 100, height/2 + 50, 100, 35, 5);//Save Button
-  fill(255);
-  stroke(255);
+  fill(255).stroke(255);
   text("SAVE", width/2 + 70, height/2 + 57);
+  pop();
+}
+
+/*
+  This Function Show guide on using various drawing tools.
+  parameter `ind` denotes the index of tab that is selected in help dialog box
+*/
+function showHelp(ind){
+  drawable=false;
+  const helps=["Guide", "Shortcuts", "About"];
+  --ind;
+  push();
+  rectMode(CORNER);
+  textAlign(CENTER, CENTER);
+  textSize(22);
+  stroke(0,100).strokeWeight(10);
+  const wid=500;
+  rect(width/2-(wid-6)/2+8, height/2-(wid-6)/2+8 -40, wid - 6, wid - 6 + 40);//box shadow
+  const tabs = helps.length;
+  stroke(0, 55, 200).strokeWeight(2).fill(255);
+  rect(width/2 - wid/2, height/2 - wid/2 - 40, wid, wid + 40);//Rectangle Dialog Box
+  fill(0).stroke(255);
+  let margin = 20;
+  text("HELP", width/2, height/2 - wid/2 - ((margin + 40)/2 - margin));
+  let space = (wid - 20 - 20)/tabs;
+  stroke(0);
+  textSize(18);
+  translate(width/2 - wid/2, height/2 - wid/2);
+  for(let i = 0; i<tabs; i++){
+    stroke(0);
+    if (i == ind)
+      fill(255);
+    else
+      fill(220);
+    rect(margin + i * space, margin, space, 30, 10, 10, 0, 0);
+    fill(0).stroke(220);
+    text(helps[i], margin + space/2 + i * space, margin + 30 * 0.5);
+  }
+  fill(255).stroke(0);
+  rect(margin, margin + 30, 500 - 20 - 20, 500 - 20 - 20 - 30);
+  stroke(255).strokeCap(SQUARE);
+  line(ind*space + margin + 1, margin + 30, ind*space + margin + space - 1, margin + 30);
+
+
+
   pop();
 }
 
@@ -259,6 +304,8 @@ function exportFile(name){
   bool=false will not.
 */
 function makeParam(bool){
+  if (!drawable)
+    return;
   temp = [mouseX, mouseY]; //stores the mouse pointer clicked/released coordinate
   mag = [];
   //checks and sets magnitude parameter for particular point of the shape
@@ -347,7 +394,7 @@ function showStatusBar(){
 
 //shows annotations when a shape tool is selected
 function showAnnotation(){
-  if(sel && mouseX > 0 && mouseX < width && mouseY > prop.canvasY+1 && mouseY < prop.canvasY+prop.canvasH-1 && !options["Export As"].enabled){
+  if(sel && mouseX > 0 && mouseX < width && mouseY > prop.canvasY+1 && mouseY < prop.canvasY+prop.canvasH-1){
     push();
     fill(0);
     const w = ann.length * 9;
@@ -377,13 +424,22 @@ function mousePressed(){
     }
     params = drawn = [];
   }
+  else if (options["Help"].enabled && mouseX > (width/2 - 500/2 + 20) && mouseX < (width/2 + 500/2 - 20) && mouseY >= (height/2 - 500/2 + 20) && mouseY <= (height/2 - 500/2 + 20)+30) {
+    /*
+    500 : Help Dialog Box width & height,
+    20  : Help Dialog Box margin on all sides,
+    30  : Help Dialog Tab height,
+    */
+    options["Help"].param[0] = int((mouseX - (width/2 - 500/2 + 20))/((500 - 20 - 20)/3/*no of tabs in help dialog box*/)) + 1;
+  }
   //option selection from optionsbar and toggling its enability
   else if(mouseY >= prop.optionsBarY && mouseY <= prop.optionsBarY+prop.optionsBarH){
     let opt = Object.keys(options)[floor(mouseX/prop.optionsGap)];
     options[opt].enabled = !options[opt].enabled;
+    drawable = true;
   }
   //when save button from export dialog box is clicked
-  else if(mouseX>=width/2+50 && mouseX<=width/2+150 && mouseY>=height/2+32.5 && mouseY<=height/2+67.5 && options["Export As"].enabled && options["Export As"].param.length-1){
+  else if(mouseX>=width/2+50 && mouseX<=width/2+150 && mouseY>=height/2+32.5 && mouseY<=height/2+67.5 && options["Export As"].enabled && options["Export As"].param[0].length-1){
     let content = ["//Generated by Canvas2D at https://ahmedazhar05.github.io/Canvas2D\n","noFill();","rectMode(CORNERS);","ellipseMode(CENTER);\n"];
     for(let s of shapes){
       if(s[0] == "Pencil"){
@@ -397,19 +453,20 @@ function mousePressed(){
         content.push(tmp.shift().toLowerCase()+"("+tmp.reduce((sum,x) => sum +", "+ abs(x.toString()))+");");
       }
     }
-    save(content, options["Export As"].param.slice(0,-1)+'.txt');
+    save(content, options["Export As"].param[0].slice(0,-1)+'.txt');
     saved=shapes.length;
     options["Export As"].enabled = false;
+    drawable = true;
   }
-  else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil")
+  else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil" && drawable)
     makeParam(true);
   //temporary point addition when shape tool is selected and clicked on canvas
-  else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && pts == 1)
+  else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && pts == 1 && drawable)
     makeParam(false);
 }
 
 function mouseReleased(){
-  if(mouseX >= 0 && mouseX <= prop.width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil"){
+  if(mouseX >= 0 && mouseX <= prop.width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil" && drawable){
     makeParam(false);
     shapes.push(["Pencil"].concat(drawn));
     pts = 0;
@@ -423,7 +480,7 @@ function mouseReleased(){
   }
   //permanent addtion of points in drawn[]
   //addition of params[] to shapes when object's final point is created
-  else if(mouseX >= 0 && mouseX <= prop.width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel){
+  else if(mouseX >= 0 && mouseX <= prop.width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && drawable){
     makeParam(true);
     --pts;
     ann = (tools[sel])[pts-1];
@@ -442,22 +499,26 @@ function mouseReleased(){
 }
 
 function mouseDragged(){
-  if(mouseX >= 0 && mouseX <= width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil")
+  if(mouseX >= 0 && mouseX <= width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil" && drawable)
     makeParam(true);
   //preview shape when last point of the object is being drawn/dragged by temporarily adding point into drawn
-  else if(mouseX >= 0 && mouseX <= width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && pts == 1)
+  else if(mouseX >= 0 && mouseX <= width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && pts == 1 && drawable)
     makeParam(false);
+}
+
+function voidfunc(){
+  null;
 }
 
 function keyPressed(){
   if(options["Export As"].enabled){
     //Export Filename Input
-    if(options["Export As"].param.length < 12 && (keyCode>=65 && keyCode<=90 || keyCode>=48 && keyCode<=57 || keyCode>=96 && keyCode<=105 || key=='-' || key=='_'))
-      options["Export As"].param = options["Export As"].param.slice(0,-1)+key+'|';
-    else if(keyCode == 8 && options["Export As"].param.length > 1)
-      options["Export As"].param = options["Export As"].param.slice(0,-2)+'|';
+    if(options["Export As"].param[0].length < 12 && (keyCode>=65 && keyCode<=90 || keyCode>=48 && keyCode<=57 || keyCode>=96 && keyCode<=105 || key=='-' || key=='_'))
+      options["Export As"].param[0] = options["Export As"].param[0].slice(0,-1)+key+'|';
+    else if(keyCode == 8 && options["Export As"].param[0].length > 1)
+      options["Export As"].param[0] = options["Export As"].param[0].slice(0,-2)+'|';
     //File Save
-    else if(options["Export As"].param.length-1 && keyCode == 13){
+    else if(options["Export As"].param[0].length-1 && keyCode == 13){
       let content = ["//Generated by Canvas2D at https://ahmedazhar05.github.io/Canvas2D\n","noFill();","rectMode(CORNERS);","ellipseMode(CENTER);\n"];
       for(let s of shapes){
         if(s[0] == "Pencil"){
@@ -471,9 +532,10 @@ function keyPressed(){
           content.push(tmp.shift().toLowerCase()+"("+tmp.reduce((sum,x) => sum +", "+ abs(x.toString()))+");");
         }
       }
-      save(content, options["Export As"].param.slice(0,-1)+'.txt');
+      save(content, options["Export As"].param[0].slice(0,-1)+'.txt');
       saved=shapes.length;
       options["Export As"].enabled = false;
+      drawable = true;
     }
   }
   else if(keyIsDown(17) && keyCode == 90){
@@ -487,3 +549,5 @@ window.addEventListener('beforeunload', (event) => {
     event.returnValue = false;
   }
 });
+
+//add helper contents
