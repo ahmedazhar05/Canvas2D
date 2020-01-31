@@ -12,6 +12,11 @@ let mag;  //store magnitude of temp with other object points as parameter if req
 let drawn;  //stores  realtime coordinates of the object thats currently being made not parameters
 let saved;  //shapes exported/saved so far
 let drawable; //determines if user can draw on canvas or not
+let desc; //stores description of tools
+
+function preload(){
+  font = loadFont('Helvetica.ttf');
+}
 
 /*
   parameters here are the shapes's function parameters required to create the shape
@@ -75,6 +80,47 @@ function setup() {
   textAlign(CENTER, CENTER);
   textSize(15);
   noStroke();
+
+  desc=[];
+  let lines=[];
+  fetch('./Desc.txt')
+  .then(response => response.text())
+  .then(data => {
+    const wid=500;
+    const margin=20;
+    const innerMargin=20;
+    while(/\n\n/.test(data))
+      data = data.replace(/\n\n/,'\n\t\n');
+    for(let line of data.split('\n'))
+      lines.push(line.split(' '));
+    for(let i=0; i<lines.length; i++){
+      let inx = 0;
+      let part='';
+      for(let j=0;j<lines[i].length;j++){
+        part = lines[i].reduce((sum, val, ind)=>{
+          if(ind >= inx && ind <= j)
+            return (sum + ' ' + val);
+          else
+            return sum;
+        }, '');
+        //console.log(part, font.textBounds(part, 0, 0, 18).w, wid-(margin+innerMargin)*2, inx, j);
+        if(font.textBounds(part, 0, 0, 18).w >= wid-(margin+innerMargin)*2){
+          desc.push(part.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '').substring(0, part.lastIndexOf(' ')-1));
+          lines[i] = lines[i].slice(j);
+          // lines.splice(i+1, 0, temp);
+          // lines[i]=part.split(' ');
+          inx = j;
+          --i;
+          // const temp = desc.splice(i, 1, desc[i].slice(inx, j));
+          // const temp2 = temp.slice(j);
+          // console.log(j, temp, temp2);
+          // desc.splice(i+1, 0, temp.slice(j));
+        }
+      }
+      if(inx == 0)
+        desc.push(part.trim());
+    }
+  });
 }
 
 function draw() {
@@ -270,8 +316,7 @@ function showHelp(ind){
   const margin = 20;
   textSize(25);
   text("HELP", width/2, height/2 - wid/2 - ((margin + 40)/2 - margin));
-  const space = (wid - 20 - 20)/tabs;
-  const innerMargin = 50;
+  const space = (wid - 20*2)/tabs;
   stroke(0);
   textSize(18);
   translate(width/2 - wid/2, height/2 - wid/2);
@@ -281,22 +326,110 @@ function showHelp(ind){
       fill(255);
     else
       fill(220);
-    rect(margin + i * space, margin, space, 30, 10, 10, 0, 0);
+    rect(margin + i * space, margin, space, 30/*tab height*/, 10, 10, 0, 0);
     fill(0).stroke(220);
     text(helps[i], margin + space/2 + i * space, margin + 30 * 0.5);
   }
   fill(255).stroke(0);
-  rect(margin, margin + 30, wid - 20 - 20, wid - 20 - 20 - 30);
+  rect(margin, margin + 30/*tab height*/, wid - margin*2, wid - margin*2 - 30/*tab height*/);
   stroke(255).strokeCap(SQUARE);
-  line(ind*space + margin + 1, margin + 30, ind*space + margin + space - 1, margin + 30);
+  line(ind*space + margin + 1, margin + 30/*tab height*/, ind*space + margin + space - 1, margin + 30);
 
   //Content
-  fetch('./Desc.txt')
-  .then(response => response.text())
-  .then((data) => {
-    //console.log(data);
-  });
+  textAlign(LEFT, BOTTOM);
+  fill(0).noStroke();
+  let pos=margin + 20/*inner margin*/ + 30/*tab height*/ + 30;
+  let NormConst = 0;
+  /*
+    1 : textStyle(NORMAL);
+    2 : textSize(18);
+  */
+  for(let i = 0; i < desc.length; i++){
+    let line = desc[i];
+    if(/^#{1,7}\s/g.test(line)){
+      const size = line.match(/^#{1,7}/g)[0].length;
+      textSize((8-size)*5);
+      textStyle(BOLD);
+      line = line.replace(/^#{1,7}\s/g, '');
+      NormConst = NormConst * 100 + 12;
+    }
+    if(/^`{3}/g.test(line)){
+      let lim=i;
+      while(++lim<desc.length)
+        if (/^`{3}/g.test(desc[lim])) break;
+      --lim;
+      fill(220);
+      rect(margin+20, pos, wid - margin*2 - 20*2, (lim-i)*textSize());
+      const grey=color(220,220,220);
+      const blue=color(55,55,200);
+      const pink=color(200,55,55);
+      for(let j=i+1; j<lim; j++){
+        let x=margin + 20 + 20/*code indent*/;
+        let st = /\(.+(?=\))/.exec(desc[j]);
+        console.log(st);
+        if(st == null){
+          fill(blue)
+          text(desc[j], x, pos);
+          pos += textSize();
+          continue;
+        } else {
+          const ptd=desc[i].substring(0, st.index);
+          const comma= font.textBounds(',',0,0,textSize()).w;
+          fill(blue);
+          text(ptd, x, pos);
+          x+=font.textBounds(ptd,0,0,textSize()).w;
+          fill(grey);
+          text("(",x,pos);
+          x+=comma;
+          const vars = st.substring(1).split(',');
+          let k=0;
+          for(let v in vars){
+            fill(pink);
+            text(v, x, pos);
+            fill(grey);
+            if(k!=vars.length-1)
+              text(',', x+comma, pos);
+            x += comma + font.textBounds(v,0,0,textSize()).w;
+            ++k;
+          }
+          text(');', x-comma, pos);
+          pos += textSize();
+        }
+      }
+      i=lim;
 
+    }
+    text(line, margin+20, pos, wid - margin*2 - 20*2);
+    pos += textSize();
+    //pos += font.textBounds(line, 0, 0, textSize()).h;
+    while(NormConst>0){
+      switch(NormConst%10){
+        case 1 : textStyle(NORMAL); break;
+        case 2 : textSize(18); break;
+        default: NormConst = 0;
+      }
+      NormConst = int(NormConst/10);
+    }
+    /*
+    switch(word){
+      case '#':
+        window['textSize'].apply(this, [(7-c)*5]);
+        window['textStyle'].apply(this, [BOLD]);
+        ++c;
+        break;
+      case '\n':
+        text(trim(dt), margin+20, pos, wid - margin*2 - 20*2);
+        dt = '';
+        pos += textSize();
+        //trim(dt), font.textBounds(trim(dt), 0, 0, textSize()).h;
+        c=0;
+        window['textSize'].apply(this, [18]);
+        window['textStyle'].apply(this, [NORMAL]);
+        break;
+      default:
+        dt += v;
+    }*/
+  }
   pop();
 }
 

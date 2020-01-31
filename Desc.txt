@@ -1,0 +1,13 @@
+## Pencil
+Pencil is a freehand tool that lets you draw any arbitrary path or shape of a more complex form without any constraint or parameter.
+A single shape starts to be drawn when a user clicks, up until the click is released.
+
+There is no specific parameter that is required for a shape to be drawn using pencil.
+#### p5 Syntax :
+``` javascript
+beginShape( );
+vertex(x1, y1);
+...
+vertex(xn, yn);
+EndShape( );
+```
