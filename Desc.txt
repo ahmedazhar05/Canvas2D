@@ -1,13 +1,31 @@
 ## Pencil
 Pencil is a freehand tool that lets you draw any arbitrary path or shape of a more complex form without any constraint or parameter.
-A single shape starts to be drawn when a user clicks, up until the click is released.
+A single shape starts to be drawn when a user clicks up and until the click is released.
 
 There is no specific parameter that is required for a shape to be drawn using pencil.
 #### p5 Syntax :
-``` javascript
-beginShape( );
+```javascript
+beginShape();
 vertex(x1, y1);
 ...
 vertex(xn, yn);
-EndShape( );
+EndShape();
 ```
+
+## Bezier
+Bezier is a tool that lets you draw curves.
+A single curve is drawn when two points representing a line segment along with its two control points are given which determines the curvature of the line segment.
+There are 4 parameters required for a curve to be drawn, these are :
+1. **Starting Point** : *It is the first point for the line segment.*
+2. **Second Point** : *It is the second point for the line segment.*
+3. **First Control Point** : *The first half of the line formed between the above two points is pulled towards this point.*
+4. **Last Control Point** : *The second half of the line formed between the first two points is pulled towards this point.*
+#### p5 Syntax :
+```javascript
+bezier(x1, y1, x2, y2, x3, y3, x4, y4);
+```
+
+<details>
+<summary>DEMO</summary>
+let demo = [];
+</details>

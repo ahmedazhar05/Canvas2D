@@ -13,6 +13,7 @@ let drawn;  //stores  realtime coordinates of the object thats currently being m
 let saved;  //shapes exported/saved so far
 let drawable; //determines if user can draw on canvas or not
 let desc; //stores description of tools
+let pos;  //stores regex values
 
 function preload(){
   font = loadFont('Helvetica.ttf');
@@ -86,8 +87,30 @@ function setup() {
   fetch('./Desc.txt')
   .then(response => response.text())
   .then(data => {
-    
+
+    desc = data;
+
+    let regex = [
+      [...data.matchAll(/(?:\*\*)([^\s][\w,.><"':;}{()\-+/\s&^%$#@!~`]*[^\s])(?:\*\*)/gm)],//bolded string
+      [...data.matchAll(/[^*\n]\*([\w\s.,]+)\*(?!\*)/gm)],//italisized string
+      [...data.matchAll(/^(?:[\t\s]*)(\d\d?)\.(?!\n\s).+/gm)],//numbered lists
+      [...data.matchAll(/^([\t\s]*)\-(?=\s.+)/gm)],//bulleted lists
+      [...data.matchAll(/^(?:#{1,6}\s)(.+)(?:\n*)|^(.+)(?:\n[-=]\s*\n)/gm)],//heading
+      [...data.matchAll(/^`{3}/gm)],//code segment start/end
+      [...data.matchAll(/\(([^\)]*[,\w]*)\)/gm)],//function parameters
+      [...data.matchAll(/[a-zA-z0-9]+(?=\.[a-zA-Z0-9])/gm)],//object variable
+      [...data.matchAll(/\w+(?=\()/gm)],//function name
+    ];
+    console.log(regex);
+    pos = {};
+    for(let i=0;i<regex.length|0;i++){
+      for(let j=0;j<regex[i].length|0;j++)
+        if(typeof(pos[regex[i][j].index]) == 'undefined')
+          pos[regex[i][j].index]={i,j};
+    }
   });
+  //break lines according to width of help dialog box before indexing through regex
+  //designing 'desc' data for help dialog box content using pos's indexes
 }
 
 function draw() {
@@ -277,12 +300,12 @@ function showHelp(ind){
   const wid=500;
   rect(width/2-(wid-6)/2+8, height/2-(wid-6)/2+8 -40, wid - 6, wid - 6 + 40);//box shadow
   const tabs = helps.length;
-  stroke(0, 55, 200).strokeWeight(2).fill(255);
+  stroke(0, 55, 200).strokeWeight(2).fill(135, 234, 138);
   rect(width/2 - wid/2, height/2 - wid/2 - 40, wid, wid + 40);//Rectangle Dialog Box
-  fill(0).stroke(255);
+  fill(0).stroke(0,100);
   const margin = 20;
   textSize(25);
-  text("HELP", width/2, height/2 - wid/2 - ((margin + 40)/2 - margin));
+  text("H E L P", width/2, height/2 - wid/2 - ((margin + 40)/2 - margin));
   const space = (wid - 20*2)/tabs;
   stroke(0);
   textSize(18);
@@ -301,6 +324,7 @@ function showHelp(ind){
   rect(margin, margin + 30/*tab height*/, wid - margin*2, wid - margin*2 - 30/*tab height*/);
   stroke(255).strokeCap(SQUARE);
   line(ind*space + margin + 1, margin + 30/*tab height*/, ind*space + margin + space - 1, margin + 30);
+  pop();
 }
 
 /*
