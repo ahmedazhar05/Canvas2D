@@ -83,7 +83,7 @@ function setup() {
   noStroke();
 
   desc=[];
-  let lines=[];
+  pos = {};
   fetch('./Desc.txt')
   .then(response => response.text())
   .then(data => {
@@ -102,7 +102,6 @@ function setup() {
       [...data.matchAll(/\w+(?=\()/gm)],//function name
     ];
     console.log(regex);
-    pos = {};
     for(let i=0;i<regex.length|0;i++){
       for(let j=0;j<regex[i].length|0;j++)
         if(typeof(pos[regex[i][j].index]) == 'undefined')
@@ -111,6 +110,7 @@ function setup() {
   });
   //break lines according to width of help dialog box before indexing through regex
   //designing 'desc' data for help dialog box content using pos's indexes
+  //add dragAndDrop feature for both help and export dialog boxes
 }
 
 function draw() {
