@@ -44,7 +44,7 @@ function setup() {
     "Show Grid" : {enabled : false, func : 'showGrid'},
     "Show Ruler" : {enabled : false, func : 'showRuler'},
     "Show Annotation" : {enabled : true, func : 'showAnnotation'},
-    "Help" : {enabled : true, func : 'showHelp', param : [1]},
+    "Help" : {enabled : false, func : 'showHelp', param : [1]},
     "Export As" : {enabled : false, func : 'exportFile', param : ['|']},//prestores blinking line
   };
 
@@ -82,33 +82,56 @@ function setup() {
   textSize(15);
   noStroke();
 
-  desc=[];
+  desc = '';
   pos = {};
   fetch('./Desc.txt')
   .then(response => response.text())
   .then(data => {
 
-    desc = data;
+    const wid=500;
+    const margin=20;
+    const innerMargin=20;
+
+    data = data.trim()+'\n';
+    let breaks=[];
+    [...data.matchAll(/[\s\n]/gm)].forEach(val => breaks.push(val.index));
+    let start=0;
+    let f=font;
+    for(let stop of breaks){
+      let sub = data.substring(start, stop+1);
+      if(data[stop] == '\n'){
+        desc += sub;
+        start = stop + 1;
+      } else if(f.textBounds(sub, 0, 0, 18).w > wid-(margin+innerMargin+((f==font)?0:10))*2){
+        const sp = sub.lastIndexOf(' ', sub.length - 2);
+        desc += sub.substring(0, sp)+'\n';
+        sub = "";
+        start = data.lastIndexOf(' ', stop-1)+1;
+      }
+    }
 
     let regex = [
-      [...data.matchAll(/(?:\*\*)([^\s][\w,.><"':;}{()\-+/\s&^%$#@!~`]*[^\s])(?:\*\*)/gm)],//bolded string
-      [...data.matchAll(/[^*\n]\*([\w\s.,]+)\*(?!\*)/gm)],//italisized string
-      [...data.matchAll(/^(?:[\t\s]*)(\d\d?)\.(?!\n\s).+/gm)],//numbered lists
-      [...data.matchAll(/^([\t\s]*)\-(?=\s.+)/gm)],//bulleted lists
-      [...data.matchAll(/^(?:#{1,6}\s)(.+)(?:\n*)|^(.+)(?:\n[-=]\s*\n)/gm)],//heading
-      [...data.matchAll(/^`{3}/gm)],//code segment start/end
-      [...data.matchAll(/\(([^\)]*[,\w]*)\)/gm)],//function parameters
-      [...data.matchAll(/[a-zA-z0-9]+(?=\.[a-zA-Z0-9])/gm)],//object variable
-      [...data.matchAll(/\w+(?=\()/gm)],//function name
+      [...desc.matchAll(/(?:\*\*)([^\s][\w,.><"':;}{()\-+/\s&^%$#@!~`]*[^\s])(?:\*\*)/gm)],//bolded string
+      [...desc.matchAll(/[^*\n]\*([\w\s.,]+)\*(?!\*)/gm)],//italisized string
+      [...desc.matchAll(/^(?:[\t\s]*)(\d\d?)\.(?!\n\s).+/gm)],//numbered lists
+      [...desc.matchAll(/^([\t\s]*)\-(?=\s.+)/gm)],//bulleted lists
+      [...desc.matchAll(/^(?:#{1,6}\s)(.+)(?:\n*)|^(.+)(?:\n[-=]\s*\n)/gm)],//heading
+      [...desc.matchAll(/^`{3}/gm)],//code segment start/end
+      [...desc.matchAll(/\(([^\)]*[,\w]*)\)/gm)],//function parameters
+      [...desc.matchAll(/[a-zA-z0-9]+(?=\.[a-zA-Z0-9])/gm)],//object variable
+      [...desc.matchAll(/\w+(?=\()/gm)],//function name
+      [...desc.matchAll(/\n/gm)],//newline '\n'
     ];
     console.log(regex);
+
     for(let i=0;i<regex.length|0;i++){
-      for(let j=0;j<regex[i].length|0;j++)
+      for(let j=0;j<regex[i].length|0;j++){
         if(typeof(pos[regex[i][j].index]) == 'undefined')
-          pos[regex[i][j].index]={i,j};
+          pos[regex[i][j].index]={i, r: regex[i][j]};
+      }
     }
+    console.log(pos);
   });
-  //break lines according to width of help dialog box before indexing through regex
   //designing 'desc' data for help dialog box content using pos's indexes
   //add dragAndDrop feature for both help and export dialog boxes
 }
@@ -298,12 +321,13 @@ function showHelp(ind){
   textSize(22);
   stroke(0,100).strokeWeight(10);
   const wid=500;
+  const margin = 20;
+  const tabHeight = 30;
   rect(width/2-(wid-6)/2+8, height/2-(wid-6)/2+8 -40, wid - 6, wid - 6 + 40);//box shadow
   const tabs = helps.length;
   stroke(0, 55, 200).strokeWeight(2).fill(135, 234, 138);
   rect(width/2 - wid/2, height/2 - wid/2 - 40, wid, wid + 40);//Rectangle Dialog Box
   fill(0).stroke(0,100);
-  const margin = 20;
   textSize(25);
   text("H E L P", width/2, height/2 - wid/2 - ((margin + 40)/2 - margin));
   const space = (wid - 20*2)/tabs;
@@ -316,14 +340,66 @@ function showHelp(ind){
       fill(255);
     else
       fill(220);
-    rect(margin + i * space, margin, space, 30/*tab height*/, 10, 10, 0, 0);
+    rect(margin + i * space, margin, space, tabHeight, 10, 10, 0, 0);
     fill(0).stroke(220);
-    text(helps[i], margin + space/2 + i * space, margin + 30 * 0.5);
+    text(helps[i], margin + space/2 + i * space, margin + tabHeight * 0.5);
   }
   fill(255).stroke(0);
-  rect(margin, margin + 30/*tab height*/, wid - margin*2, wid - margin*2 - 30/*tab height*/);
+  rect(margin, margin + tabHeight, wid - margin*2, wid - margin*2 - tabHeight);
   stroke(255).strokeCap(SQUARE);
-  line(ind*space + margin + 1, margin + 30/*tab height*/, ind*space + margin + space - 1, margin + 30);
+  line(ind*space + margin + 1, margin + tabHeight, ind*space + margin + space - 1, margin + 30);
+
+  //Content
+  textAlign(LEFT, TOP);
+  textSize(18);
+  fill(0).noStroke();
+  let posY = margin+margin+18;
+  let indent = 0;
+  let start = 0;
+  // let idx = 0;
+  // let newline = [];
+  // [...desc.matchAll(/\n/gm)].forEach(val => newline.push(val.index));//newline '\n'
+  for(let p in pos){
+    // if(newline[idx] < pos[p]){
+    //   text(desc.substring(newline[idx-1]+1, newline[idx]), margin+margin, posY);
+    //   --p;
+    //   posY += textSize();
+    // } else {
+    //   --idx;
+    let str = desc.substring(start, pos[p]);
+    
+    switch(pos[p].i){
+      case 0://bolded string
+        textStyle((textStyle() == BOLD)?NORMAL:BOLD);
+        break;
+      case 1://italisized string
+        textStyle((textStyle() == ITALIC)?NORMAL:ITALIC);
+        break;
+      case 2://numbered lists
+        indent = (indent)?0:20;
+        break;
+      case 3://bulleted lists
+        indent = (indent)?0:20;
+        break;
+      case 4://heading
+        textSize();
+        break;
+      case 5://code segment start/end
+        break;
+      case 6://function parameters
+        break;
+      case 7://object variable
+        break;
+      case 8://function name
+        break;
+      case 9://newlines
+        break;
+    }
+    if (!str){
+      text(str, margin+margin+indent, posY);
+      posY += textSize();
+    }
+  }
   pop();
 }
 
