@@ -14,9 +14,11 @@ let saved;  //shapes exported/saved so far
 let drawable; //determines if user can draw on canvas or not
 let desc; //stores description of tools
 let pos;  //stores regex values
+let drag; //to store dialog box's drag offsets w.r.t. mouseX and mouseY
 
 function preload(){
   font = loadFont('Helvetica.ttf');
+  code = loadFont('RobotoMono-Bold.ttf');
 }
 
 /*
@@ -76,6 +78,14 @@ function setup() {
   prop.statusBarY = prop.canvasY + prop.canvasH;
   prop.toolGap = width / Object.keys(tools).length;
   prop.optionsGap = width / Object.keys(options).length;
+  prop.help = {
+    x : width/2,
+    y : height/2,
+  };
+  prop.export = {
+    x : width/2,
+    y : height/2,
+  };
 
   //global setting
   textAlign(CENTER, CENTER);
@@ -122,7 +132,6 @@ function setup() {
       [...desc.matchAll(/\w+(?=\()/gm)],//function name
       [...desc.matchAll(/\n/gm)],//newline '\n'
     ];
-    console.log(regex);
 
     for(let i=0;i<regex.length|0;i++){
       for(let j=0;j<regex[i].length|0;j++){
@@ -130,7 +139,6 @@ function setup() {
           pos[regex[i][j].index]={i, r: regex[i][j]};
       }
     }
-    console.log(pos);
   });
   //designing 'desc' data for help dialog box content using pos's indexes
   //add dragAndDrop feature for both help and export dialog boxes
@@ -284,26 +292,26 @@ function exportFile(name){
   textAlign(LEFT, BASELINE);
   textSize(22);
   stroke(0,100).strokeWeight(10);
-  rect(width/2+8, height/2+8, 370, 170);//box shadow
+  rect(prop.export.x+8, prop.export.y+8, 370, 170);//box shadow
   stroke(255, 0, 0).strokeWeight(2).fill(255);
-  rect(width/2, height/2, 375, 175);//Rectangle Dialog Box
+  rect(prop.export.x, prop.export.y, 375, 175);//Rectangle Dialog Box
   stroke(0).strokeWeight(0.5).fill(235);
-  rect(width/2 - 20, height/2, 260, 35);//Text input box
+  rect(prop.export.x - 20, prop.export.y, 260, 35);//Text input box
   fill(0);
-  text("Enter Filename :", width/2 - 150, height/2 - 35);
-  text(".txt", width/2 + 120, height/2 + 7);
+  text("Enter Filename :", prop.export.x - 150, prop.export.y - 35);
+  text(".txt", prop.export.x + 120, prop.export.y + 7);
 
   //cursor blink effect
-  //blinks for 10s after every 10s of not blinking
+  //one blink takes place every 20 frames
   if(frameCount % 20 > 10)
     name = name.slice(0,-1);//removes cursor which is the last letter in `name`
 
-  text(name, width/2 - 145, height/2 + 6);//displays user inputted filename
+  text(name, prop.export.x - 145, prop.export.y + 6);//displays user inputted filename
 
   fill(119, 204, 92);//Green
-  rect(width/2 + 100, height/2 + 50, 100, 35, 5);//Save Button
-  fill(255).stroke(255);
-  text("SAVE", width/2 + 70, height/2 + 57);
+  rect(prop.export.x + 100, prop.export.y + 50, 100, 35, 5);//Save Button
+  fill(255).stroke(255).textFont(code);
+  text("SAVE", prop.export.x + 73, prop.export.y + 57);
   pop();
 }
 
@@ -323,17 +331,17 @@ function showHelp(ind){
   const wid=500;
   const margin = 20;
   const tabHeight = 30;
-  rect(width/2-(wid-6)/2+8, height/2-(wid-6)/2+8 -40, wid - 6, wid - 6 + 40);//box shadow
+  rect(prop.help.x-(wid-6)/2+8, prop.help.y-(wid-6)/2+8 -40, wid - 6, wid - 6 + 40);//box shadow
   const tabs = helps.length;
   stroke(0, 55, 200).strokeWeight(2).fill(135, 234, 138);
-  rect(width/2 - wid/2, height/2 - wid/2 - 40, wid, wid + 40);//Rectangle Dialog Box
+  rect(prop.help.x - wid/2, prop.help.y - wid/2 - 40, wid, wid + 40);//Rectangle Dialog Box
   fill(0).stroke(0,100);
   textSize(25);
-  text("H E L P", width/2, height/2 - wid/2 - ((margin + 40)/2 - margin));
+  text("H E L P", prop.help.x, prop.help.y - wid/2 - ((margin + 40)/2 - margin));
   const space = (wid - 20*2)/tabs;
   stroke(0);
   textSize(18);
-  translate(width/2 - wid/2, height/2 - wid/2);
+  translate(prop.help.x - wid/2, prop.help.y - wid/2);
   for(let i = 0; i<tabs; i++){
     stroke(0);
     if (i == ind)
@@ -370,7 +378,8 @@ function showHelp(ind){
     
     switch(pos[p].i){
       case 0://bolded string
-        textStyle((textStyle() == BOLD)?NORMAL:BOLD);
+        textStyle(BOLD);
+
         break;
       case 1://italisized string
         textStyle((textStyle() == ITALIC)?NORMAL:ITALIC);
@@ -519,63 +528,78 @@ function showAnnotation(){
 }
 
 function mousePressed(){
-  //shape tool selection from toolbar
-  if(mouseY >= prop.toolBarY && mouseY <= prop.toolBarY + prop.toolBarH){
-    let ind = floor(mouseX/prop.toolGap);
-    if(sel == Object.keys(tools)[ind]){
-      sel = ann = null;
-      pts = 0;
-    } else {
-      sel=Object.keys(tools)[ind];
-      pts=tools[sel].length;
-      if(sel == "Pencil")
-        pts = -1;
-      ann=(tools[sel])[abs(pts)-1];
+  if(options["Export As"].enabled && mouseX >= prop.export.x - 375/2 && mouseX <= prop.export.x + 375/2 && mouseY >= prop.export.y - 175/2 && mouseY <= prop.export.y + 175/2){
+    //when save button from export dialog box is clicked
+    if(mouseX>=prop.export.x+50 && mouseX<=prop.export.x+150 && mouseY>=prop.export.y+32.5 && mouseY<=prop.export.y+67.5 && options["Export As"].param[0].length-1){
+      let content = ["//Generated by Canvas2D at https://ahmedazhar05.github.io/Canvas2D\n","noFill();","rectMode(CORNERS);","ellipseMode(CENTER);\n"];
+      for(let s of shapes){
+        if(s[0] == "Pencil"){
+          content.push("beginShape();");
+          for(let i=1;i<s.length;i+=2)
+            content.push("vertex("+s[i]+", "+s[i+1]+");");
+          content.push("endShape();");
+        }
+        else{
+          let tmp = s.slice();
+          content.push(tmp.shift().toLowerCase()+"("+tmp.reduce((sum,x) => sum +", "+ abs(x.toString()))+");");
+        }
+      }
+      save(content, options["Export As"].param[0].slice(0,-1)+'.txt');
+      saved=shapes.length;
+      options["Export As"].enabled = false;
+      drawable = true;
     }
-    params = drawn = [];
+    //export dialog drag feature enabler
+    else if (mouseY <= prop.export.y - 35)
+      drag = {pr: (val)=>{prop.export = val}, dx: mouseX - prop.export.x, dy: prop.export.y - mouseY};
   }
-  else if (options["Help"].enabled && mouseX > (width/2 - 500/2 + 20) && mouseX < (width/2 + 500/2 - 20) && mouseY >= (height/2 - 500/2 + 20) && mouseY <= (height/2 - 500/2 + 20)+30) {
-    /*
+  /*
     500 : Help Dialog Box width & height,
     20  : Help Dialog Box margin on all sides,
     30  : Help Dialog Tab height,
-    */
-    options["Help"].param[0] = int((mouseX - (width/2 - 500/2 + 20))/((500 - 20 - 20)/3/*no of tabs in help dialog box*/)) + 1;
+    40  : 'HELP' title height
+  */
+  else if(options["Help"].enabled && mouseX >= prop.help.x - 500/2 && mouseX <= prop.help.x + 500/2 && mouseY >= prop.help.y - 500/2 - 40 && mouseY <= prop.help.y + 500/2){
+    //help dialog drag feature enabler
+    if (mouseY <= prop.help.y - 500/2)
+      drag = {pr: (val)=>{prop.help = val}, dx: mouseX - prop.help.x, dy: prop.help.y - mouseY};
+    else if (mouseX >= (prop.help.x - 500/2 + 20) && mouseX <= (prop.help.x + 500/2 - 20) && mouseY >= (prop.help.y - 500/2 + 20) && mouseY <= (prop.help.y - 500/2 + 20)+30)
+      options["Help"].param[0] = int((mouseX - (prop.help.x - 500/2 + 20))/((500 - 20 - 20)/3/*no of tabs in help dialog box*/)) + 1;
   }
-  //option selection from optionsbar and toggling its enability
-  else if(mouseY >= prop.optionsBarY && mouseY <= prop.optionsBarY+prop.optionsBarH){
-    let opt = Object.keys(options)[floor(mouseX/prop.optionsGap)];
-    options[opt].enabled = !options[opt].enabled;
-    drawable = true;
-  }
-  //when save button from export dialog box is clicked
-  else if(mouseX>=width/2+50 && mouseX<=width/2+150 && mouseY>=height/2+32.5 && mouseY<=height/2+67.5 && options["Export As"].enabled && options["Export As"].param[0].length-1){
-    let content = ["//Generated by Canvas2D at https://ahmedazhar05.github.io/Canvas2D\n","noFill();","rectMode(CORNERS);","ellipseMode(CENTER);\n"];
-    for(let s of shapes){
-      if(s[0] == "Pencil"){
-        content.push("beginShape();");
-        for(let i=1;i<s.length;i+=2)
-          content.push("vertex("+s[i]+", "+s[i+1]+");");
-        content.push("endShape();");
+  else {
+    //shape tool selection from toolbar
+    if(mouseY >= prop.toolBarY && mouseY <= prop.toolBarY + prop.toolBarH){
+      let ind = floor(mouseX/prop.toolGap);
+      if(sel == Object.keys(tools)[ind]){
+        sel = ann = null;
+        pts = 0;
+      } else {
+        sel=Object.keys(tools)[ind];
+        pts=tools[sel].length;
+        if(sel == "Pencil")
+          pts = -1;
+        ann=(tools[sel])[abs(pts)-1];
       }
-      else{
-        let tmp = s.slice();
-        content.push(tmp.shift().toLowerCase()+"("+tmp.reduce((sum,x) => sum +", "+ abs(x.toString()))+");");
-      }
+      params = drawn = [];
     }
-    save(content, options["Export As"].param[0].slice(0,-1)+'.txt');
-    saved=shapes.length;
-    options["Export As"].enabled = false;
-    drawable = true;
+    //option selection from optionsbar and toggling its enability
+    else if(mouseY >= prop.optionsBarY && mouseY <= prop.optionsBarY+prop.optionsBarH){
+      let opt = Object.keys(options)[floor(mouseX/prop.optionsGap)];
+      options[opt].enabled = !options[opt].enabled;
+      drawable = true;
+    }
+    //permanent point drawn when pencil tool is selected and clicked on canvas
+    else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil" && drawable)
+      makeParam(true);
+    //temporary point added when shape tool is selected and clicked on canvas
+    else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && pts == 1 && drawable)
+      makeParam(false);
   }
-  else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil" && drawable)
-    makeParam(true);
-  //temporary point addition when shape tool is selected and clicked on canvas
-  else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && pts == 1 && drawable)
-    makeParam(false);
 }
 
 function mouseReleased(){
+  drag = {};
+  cursor(ARROW);
   if(mouseX >= 0 && mouseX <= prop.width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil" && drawable){
     makeParam(false);
     shapes.push(["Pencil"].concat(drawn));
@@ -609,11 +633,17 @@ function mouseReleased(){
 }
 
 function mouseDragged(){
-  if(mouseX >= 0 && mouseX <= width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil" && drawable)
-    makeParam(true);
-  //preview shape when last point of the object is being drawn/dragged by temporarily adding point into drawn
-  else if(mouseX >= 0 && mouseX <= width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && pts == 1 && drawable)
-    makeParam(false);
+  if(sel && drawable){
+    if(mouseX >= 0 && mouseX <= width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil")
+      makeParam(true);
+    //preview shape when last point of the object is being drawn/dragged by temporarily adding point into drawn
+    else if(mouseX >= 0 && mouseX <= width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && pts == 1)
+      makeParam(false);
+  }
+  else if(typeof drag.pr != 'undefined' && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height){
+    drag.pr({x: mouseX - drag.dx ,y: mouseY + drag.dy});
+    cursor(MOVE);
+  }
 }
 
 function voidfunc(){
