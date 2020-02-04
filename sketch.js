@@ -27,6 +27,7 @@ function preload(){
 */
 
 function setup() {
+  cursor(ARROW);
   drawable = true;
   sel="Pencil";
   pts=-1;
@@ -34,6 +35,8 @@ function setup() {
   // sel = ann = null;
   // pts = 0;
   params = temp = mag = lastpt = drawn = [];
+
+  drag = {};
 
   saved=0;
 
@@ -113,8 +116,7 @@ function setup() {
         desc += sub;
         start = stop + 1;
       } else if(f.textBounds(sub, 0, 0, 18).w > wid-(margin+innerMargin+((f==font)?0:10))*2){
-        const sp = sub.lastIndexOf(' ', sub.length - 2);
-        desc += sub.substring(0, sp)+'\n';
+        desc += sub.substring(0, sub.lastIndexOf(' ', sub.length - 2))+'\n';
         sub = "";
         start = data.lastIndexOf(' ', stop-1)+1;
       }
@@ -141,22 +143,27 @@ function setup() {
     }
   });
   //designing 'desc' data for help dialog box content using pos's indexes
-  //add dragAndDrop feature for both help and export dialog boxes
 }
 
 function draw() {
 
-  let op = 0;
+  if(options["Export As"].enabled && mouseX > prop.export.x - 20 - 260/2 && mouseX < prop.export.x - 20 + 260/2 && mouseY > prop.export.y - 35/2 && mouseY < prop.export.y + 35/2)
+    cursor(TEXT);
+  else if(options["Export As"].enabled && mouseX > prop.export.x + 100 - 50 && mouseX < prop.export.x + 100 + 50 && mouseY > prop.export.y + 50 - 35/2 && mouseY < prop.export.y + 50 + 35/2)
+    cursor(HAND);
+  else if (typeof drag.pr != 'undefined')
+    cursor(MOVE);
+  else
+    cursor(ARROW);
 
   background(255);
 
-  strokeWeight(1);
-  stroke(0);
+  noFill().strokeWeight(1).stroke(0);
 
-  noFill();
   //Canvas
   rect(1, prop.canvasY, prop.width +1, prop.canvasH);
 
+  let op = 0;
   //Calls Option-specific-functions stored as object name `func` and parameters stored as `param`
   for(let opt in options){
     if(options[opt].enabled)
@@ -260,7 +267,7 @@ function showRuler(){
   //when mouse hovers over horizontal ruler then displace it
   if(mouseY >= cY && mouseY <= cY + bound)
     bY = cY+ cH - thick;
-  fill(220);
+  fill(220,200);
   rect(bX + 1, cY+1, thick, cH - 1);
   rect(1, bY + 1, prop.width, thick);
   fill(0);
@@ -361,37 +368,41 @@ function showHelp(ind){
   textAlign(LEFT, TOP);
   textSize(18);
   fill(0).noStroke();
-  let posY = margin+margin+18;
+  let posY = margin + margin + 18;
+  let posX = margin + margin;
   let indent = 0;
   let start = 0;
-  // let idx = 0;
-  // let newline = [];
-  // [...desc.matchAll(/\n/gm)].forEach(val => newline.push(val.index));//newline '\n'
-  for(let p in pos){
-    // if(newline[idx] < pos[p]){
-    //   text(desc.substring(newline[idx-1]+1, newline[idx]), margin+margin, posY);
-    //   --p;
-    //   posY += textSize();
-    // } else {
-    //   --idx;
-    let str = desc.substring(start, pos[p]);
-    
-    switch(pos[p].i){
+  let end = desc.length-1;
+  // for(let p in pos){
+  for(let iter = 1; iter < Object.keys(pos).length; iter++){
+    const p = Object.keys(pos)[iter];
+    let str = desc.substring(start, p).trim();
+    switch(pos[start].i){
       case 0://bolded string
-        textStyle(BOLD);
-
         break;
       case 1://italisized string
-        textStyle((textStyle() == ITALIC)?NORMAL:ITALIC);
         break;
       case 2://numbered lists
-        indent = (indent)?0:20;
         break;
       case 3://bulleted lists
-        indent = (indent)?0:20;
         break;
       case 4://heading
-        textSize();
+        let x = 1;
+        if(pos[start].r[0][0] == '#')
+          x = pos[start].r[0].indexOf(' ');
+        else
+          ++iter;
+        //textSize(30-15*log(x));
+        //textSize(85-65*log(x));
+        textSize(30-23*log(x));
+        console.log(posY);
+        textStyle(BOLD);
+        text(pos[start].r[1], posX, posY);
+        posY += 30-23*log(x);
+        console.log(posY);
+        textSize(18);
+        textStyle(NORMAL);
+        start = p;
         break;
       case 5://code segment start/end
         break;
@@ -402,14 +413,14 @@ function showHelp(ind){
       case 8://function name
         break;
       case 9://newlines
+        text(str, posX, posY);
+        posY += 18;
+        start = p;
         break;
-    }
-    if (!str){
-      text(str, margin+margin+indent, posY);
-      posY += textSize();
     }
   }
   pop();
+  noLoop();
 }
 
 /*
@@ -550,19 +561,25 @@ function mousePressed(){
       drawable = true;
     }
     //export dialog drag feature enabler
+    /*
+      375 : Export Dialog Box width,
+      175 : Export Dialog Box height,
+      15  : Gap
+    */
     else if (mouseY <= prop.export.y - 35)
-      drag = {pr: (val)=>{prop.export = val}, dx: mouseX - prop.export.x, dy: prop.export.y - mouseY};
+      drag = {pr: (vx, vy)=>{prop.export = {x: constrain(vx, 375/2 + 15, width - 375/2 - 15), y: constrain(vy, 175/2 + 15, height - 175/2 - 15)}}, dx: mouseX - prop.export.x, dy: prop.export.y - mouseY};
   }
   /*
     500 : Help Dialog Box width & height,
     20  : Help Dialog Box margin on all sides,
     30  : Help Dialog Tab height,
     40  : 'HELP' title height
+    15  : Gap
   */
   else if(options["Help"].enabled && mouseX >= prop.help.x - 500/2 && mouseX <= prop.help.x + 500/2 && mouseY >= prop.help.y - 500/2 - 40 && mouseY <= prop.help.y + 500/2){
     //help dialog drag feature enabler
     if (mouseY <= prop.help.y - 500/2)
-      drag = {pr: (val)=>{prop.help = val}, dx: mouseX - prop.help.x, dy: prop.help.y - mouseY};
+      drag = {pr: (vx, vy)=>{prop.help = {x: constrain(vx, 500/2+15, width-500/2-15), y: constrain(vy, 500/2+40+15, height-500/2-15)}}, dx: mouseX - prop.help.x, dy: prop.help.y - mouseY};
     else if (mouseX >= (prop.help.x - 500/2 + 20) && mouseX <= (prop.help.x + 500/2 - 20) && mouseY >= (prop.help.y - 500/2 + 20) && mouseY <= (prop.help.y - 500/2 + 20)+30)
       options["Help"].param[0] = int((mouseX - (prop.help.x - 500/2 + 20))/((500 - 20 - 20)/3/*no of tabs in help dialog box*/)) + 1;
   }
@@ -640,8 +657,8 @@ function mouseDragged(){
     else if(mouseX >= 0 && mouseX <= width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && pts == 1)
       makeParam(false);
   }
-  else if(typeof drag.pr != 'undefined' && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height){
-    drag.pr({x: mouseX - drag.dx ,y: mouseY + drag.dy});
+  else if(typeof drag.pr != 'undefined'/* && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height*/){
+    drag.pr(mouseX - drag.dx, mouseY + drag.dy);
     cursor(MOVE);
   }
 }
