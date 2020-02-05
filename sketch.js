@@ -122,10 +122,12 @@ function setup() {
       }
     }
 
+    console.log(desc);
+
     let regex = [
       [...desc.matchAll(/(?:\*\*)([^\s][\w,.><"':;}{()\-+/\s&^%$#@!~`]*[^\s])(?:\*\*)/gm)],//bolded string
       [...desc.matchAll(/[^*\n]\*([\w\s.,]+)\*(?!\*)/gm)],//italisized string
-      [...desc.matchAll(/^(?:[\t\s]*)(\d\d?)\.(?!\n\s).+/gm)],//numbered lists
+      [...desc.matchAll(/^[\t\s]*\d\d?\.[\n\s](.+)/gm)],//numbered lists
       [...desc.matchAll(/^([\t\s]*)\-(?=\s.+)/gm)],//bulleted lists
       [...desc.matchAll(/^(?:#{1,6}\s)(.+)(?:\n*)|^(.+)(?:\n[-=]\s*\n)/gm)],//heading
       [...desc.matchAll(/^`{3}/gm)],//code segment start/end
@@ -374,35 +376,51 @@ function showHelp(ind){
   let start = 0;
   let end = desc.length-1;
   // for(let p in pos){
-  for(let iter = 1; iter < Object.keys(pos).length; iter++){
-    const p = Object.keys(pos)[iter];
+  for(let iter = 1; iter < Object.keys(pos).length; ++iter){
+    const p = int(Object.keys(pos)[iter]); //'pos' key i.e. regex's index
+    if(pos[end] < pos[p]){
+      p = end;
+      --iter;
+    }
     let str = desc.substring(start, p).trim();
     switch(pos[start].i){
       case 0://bolded string
+        
         break;
       case 1://italisized string
         break;
       case 2://numbered lists
+        if (!indent)
+          indent = 5;
+        text(str+'\t', posX + indent, posY);
+        posX += font.textBounds(str+'\t', 0, 0, 18);
+        start = p;
+        // end = p + pos[start].r[1].length;
         break;
       case 3://bulleted lists
+        if (!indent)
+          indent = 5;
+        text(str+'\t', posX + indent, posY);
+        posX += font.textBounds(str+'\t', 0, 0, 18);
+        start = p;
+        // end = p + pos[start].r[1].length;
         break;
       case 4://heading
         let x = 1;
         if(pos[start].r[0][0] == '#')
           x = pos[start].r[0].indexOf(' ');
-        else
+        else {
+          let chr = desc[int(Object.keys(pos)[iter])+1];
+          x = (chr=='-')?2:1;
           ++iter;
-        //textSize(30-15*log(x));
-        //textSize(85-65*log(x));
-        textSize(30-23*log(x));
-        console.log(posY);
+        }
+        textSize(50-20*log(x));
         textStyle(BOLD);
-        text(pos[start].r[1], posX, posY);
-        posY += 30-23*log(x);
-        console.log(posY);
+        text((pos[start].r[1])?pos[start].r[1]:pos[start].r[2], posX, posY);
+        posY += textSize();
         textSize(18);
         textStyle(NORMAL);
-        start = p;
+        start = int(Object.keys(pos)[iter]);
         break;
       case 5://code segment start/end
         break;
@@ -415,12 +433,13 @@ function showHelp(ind){
       case 9://newlines
         text(str, posX, posY);
         posY += 18;
+        posX -= indent;
+        indent = 0;
         start = p;
         break;
     }
   }
   pop();
-  noLoop();
 }
 
 /*

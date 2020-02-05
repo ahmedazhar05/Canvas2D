@@ -1,4 +1,5 @@
-#### Bezier
+Bezier
+=
 Bezier is a tool that lets you draw curves.
 A single curve is drawn when two points representing a line segment along with its two control points are given which determines the curvature of the line segment.
 There are 4 parameters required for a curve to be drawn, these are :
