@@ -49,7 +49,7 @@ function setup() {
     "Show Grid" : {enabled : false, func : 'showGrid'},
     "Show Ruler" : {enabled : false, func : 'showRuler'},
     "Show Annotation" : {enabled : true, func : 'showAnnotation'},
-    "Help" : {enabled : false, func : 'showHelp', param : [1]},
+    "Help" : {enabled : true, func : 'showHelp', param : [1]},
     "Export As" : {enabled : false, func : 'exportFile', param : ['|']},//prestores blinking line
   };
 
@@ -144,7 +144,6 @@ function setup() {
       }
     }
   });
-  //designing 'desc' data for help dialog box content using pos's indexes
 }
 
 function draw() {
@@ -375,6 +374,7 @@ function showHelp(ind){
   let indent = 0;
   let start = 0;
   let end = desc.length-1;
+  let x = -1;
   // for(let p in pos){
   for(let iter = 1; iter < Object.keys(pos).length; ++iter){
     const p = int(Object.keys(pos)[iter]); //'pos' key i.e. regex's index
@@ -383,38 +383,59 @@ function showHelp(ind){
       --iter;
     }
     let str = desc.substring(start, p).trim();
-    switch(pos[start].i){
+    switch((typeof pos[start] == 'undefined')?-1:pos[start].i){
       case 0://bolded string
-        
+        textStyle(BOLD);
+        str = pos[start].r[1].split('\n')[++x]+' ';
+        text(str, posX, posY);
+        posX = margin + margin;
+        if(x == pos[start].r[1].split('\n').length - 1){
+          x = -1;
+          start = start + pos[start].r[0].length;
+          if (desc[p] != '\n')
+            posX += font.textBounds(str, 0, 0, 18).w;
+        }
+        textStyle(NORMAL);
         break;
       case 1://italisized string
+        textStyle(ITALIC);
+        str = pos[start].r[1].split('\n')[++x]+' ';
+        text(str, posX, posY);
+        posX = margin + margin;
+        if(x == pos[start].r[1].split('\n').length - 1){
+          x = -1;
+          start = start + pos[start].r[0].length;
+          if (desc[p] != '\n')
+            posX += font.textBounds(str, 0, 0, 18).w;
+        }
+        textStyle(NORMAL);
         break;
       case 2://numbered lists
         if (!indent)
-          indent = 5;
+          indent = 10;
         text(str+'\t', posX + indent, posY);
-        posX += font.textBounds(str+'\t', 0, 0, 18);
+        posX += font.textBounds(str+'\t\t\t', 0, 0, 18).w;
         start = p;
         // end = p + pos[start].r[1].length;
         break;
       case 3://bulleted lists
         if (!indent)
-          indent = 5;
-        text(str+'\t', posX + indent, posY);
-        posX += font.textBounds(str+'\t', 0, 0, 18);
+          indent = 10;
+        circle(posX + indent/2, posY + 8, 7);
+        posX += font.textBounds('\t\t\t', 0, 0, 18).w;
         start = p;
         // end = p + pos[start].r[1].length;
         break;
       case 4://heading
-        let x = 1;
+        let ix = 1;
         if(pos[start].r[0][0] == '#')
-          x = pos[start].r[0].indexOf(' ');
+          ix = pos[start].r[0].indexOf(' ');
         else {
           let chr = desc[int(Object.keys(pos)[iter])+1];
-          x = (chr=='-')?2:1;
+          ix = (chr=='-')?2:1;
           ++iter;
         }
-        textSize(50-20*log(x));
+        textSize(50-20*log(ix));
         textStyle(BOLD);
         text((pos[start].r[1])?pos[start].r[1]:pos[start].r[2], posX, posY);
         posY += textSize();
@@ -431,12 +452,17 @@ function showHelp(ind){
       case 8://function name
         break;
       case 9://newlines
-        text(str, posX, posY);
-        posY += 18;
-        posX -= indent;
         indent = 0;
+        posX = margin + margin;
+      default:
+        text(str, posX, posY);
         start = p;
-        break;
+        if(desc[p] != '\n')
+          posX += font.textBounds(str+' ', 0, 0, 18).w;
+        else {
+          posX = margin + margin;
+          posY += 18;
+        }
     }
   }
   pop();
