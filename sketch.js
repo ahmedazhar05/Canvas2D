@@ -49,7 +49,7 @@ function setup() {
     "Show Grid" : {enabled : false, func : 'showGrid'},
     "Show Ruler" : {enabled : false, func : 'showRuler'},
     "Show Annotation" : {enabled : true, func : 'showAnnotation'},
-    "Help" : {enabled : true, func : 'showHelp', param : [1]},
+    //"Help" : {enabled : true, func : 'showHelp', param : [1]},
     "Export As" : {enabled : false, func : 'exportFile', param : ['|']},//prestores blinking line
   };
 
@@ -621,13 +621,13 @@ function mousePressed(){
     40  : 'HELP' title height
     15  : Gap
   */
-  else if(options["Help"].enabled && mouseX >= prop.help.x - 500/2 && mouseX <= prop.help.x + 500/2 && mouseY >= prop.help.y - 500/2 - 40 && mouseY <= prop.help.y + 500/2){
+  /*else if(options["Help"].enabled && mouseX >= prop.help.x - 500/2 && mouseX <= prop.help.x + 500/2 && mouseY >= prop.help.y - 500/2 - 40 && mouseY <= prop.help.y + 500/2){
     //help dialog drag feature enabler
     if (mouseY <= prop.help.y - 500/2)
       drag = {pr: (vx, vy)=>{prop.help = {x: constrain(vx, 500/2+15, width-500/2-15), y: constrain(vy, 500/2+40+15, height-500/2-15)}}, dx: mouseX - prop.help.x, dy: prop.help.y - mouseY};
     else if (mouseX >= (prop.help.x - 500/2 + 20) && mouseX <= (prop.help.x + 500/2 - 20) && mouseY >= (prop.help.y - 500/2 + 20) && mouseY <= (prop.help.y - 500/2 + 20)+30)
-      options["Help"].param[0] = int((mouseX - (prop.help.x - 500/2 + 20))/((500 - 20 - 20)/3/*no of tabs in help dialog box*/)) + 1;
-  }
+      options["Help"].param[0] = int((mouseX - (prop.help.x - 500/2 + 20))/((500 - 20 - 20)/3/*no of tabs in help dialog box/)) + 1;
+  }*/
   else {
     //shape tool selection from toolbar
     if(mouseY >= prop.toolBarY && mouseY <= prop.toolBarY + prop.toolBarH){
