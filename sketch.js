@@ -351,16 +351,17 @@ function showHelp(ind, t){
     if(round(demo.dx) == round(demo.vtx[demo.k][0]) && round(demo.dy) == round(demo.vtx[demo.k][1])){
       ++demo.k;
       if(demo.k == Object.keys(demo.vtx).length){
-        demo.k=0;
-        demo.pause = 20;
+        --demo.k;
+        demo.dx -= 1;
+        demo.dy -= 1;
+        demo.pause = 60;
       }
-      demo.rad = (demo.k==0 || demo.k==3 || demo.k==11 || demo.k==25)? 0:5;
+      demo.rad = (demo.k==0 || demo.k==3 || demo.k==11 || demo.k==25 || demo.pause)? 0:5;
     } else if(demo.pause < 1){
       demo.dx = lerp(demo.dx, demo.vtx[demo.k][0], 0.5);
       demo.dy = lerp(demo.dy, demo.vtx[demo.k][1], 0.5);
-    } else {
-      --demo.pause;
-    }
+    } else 
+      demo.k = (!(--demo.pause))?0:demo.k;
     const bks=[0,3,11,25,29];
     for(let j=0; j<bks.length-1; j++){
       beginShape();
@@ -387,6 +388,12 @@ function showHelp(ind, t){
       window[Object.keys(tools)[t].toLowerCase()].apply(this, demo.pmt);
       --demo.pause;
     }
+    strokeWeight(1);
+    for(let i=0;i<demo.k;i++){
+      ellipse(demo.vtx[i][0], demo.vtx[i][1], 10);
+      point(demo.vtx[i][0], demo.vtx[i][1]);
+    }
+    strokeWeight(2);
     demoMouse(demo.dx, demo.dy, demo.rad);
   }
   pop();
@@ -592,21 +599,28 @@ function mousePressed(){
           demo = {vtx:[[31, 68],[38, 114],[40, 131],[30, 67],[45, 66],[47, 66],[53, 75],[53, 84],[48, 90],[32, 100],[24, 101],[68, 37],[67, 57],[69, 61],[80, 53],[87, 50],[89, 50],[92, 52],[95, 60],[95, 66],[95, 72],[89, 84],[79, 91],[66, 92],[64, 90],[68, 37],[86, 34],[97, 33],[106, 31]],};
           break;
         case 1:
-          demo = {vtx:[[29, 29],[82, 22],[62, 115],[118, 122]], pmt:[29, 29, 82, 22, 62, 115, 118, 122]};
+          demo = {vtx:[[29, 29],[118, 122],[82, 22],[62, 115]], pmt:[29, 29, 82, 22, 62, 115, 118, 122]};
           break;
         case 2:
+          demo = {vtx:[[75, 75], [124, 99]], pmt:[75, 75, 138.59292911256333, 67.88225099390857]};
           break;
         case 3:
+          demo = {vtx:[[75, 75],[108, 117]], pmt:[75, 75, 106.82696288858912]};
           break;
         case 4:
+          demo = {vtx:[[20, 46],[127, 93]], pmt:[20, 46, 127, 93]};
           break;
         case 5:
+          demo = {vtx:[[63, 67],[83, 47]], pmt:[63, 67]};
           break;
         case 6:
+          demo = {vtx:[[20, 113], [124, 115], [101, 34], [45, 22]], pmt:[20, 113, 124, 115, 101, 34, 45, 22]};
           break;
         case 7:
+          demo = {vtx:[[46, 24], [101, 130]], pmt:[46, 24, 55, 106]};
           break;
         case 8:
+          demo = {vtx:[[63, 26], [34, 126], [126, 91]], pmt:[63, 26, 34, 126, 126, 91]};
           break;
       }
       demo.dx = demo.vtx[0][0]-10;
