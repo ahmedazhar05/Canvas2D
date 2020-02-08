@@ -343,9 +343,9 @@ function showHelp(ind, t){
     textStyle(NORMAL).textSize(20);
     text("<", margin*2 + shifterWd/2, margin*2 + tabHeight + shifterHt/2);
     text(">", wid - margin*2 - shifterWd/2, margin*2 + tabHeight + shifterHt/2);
-    noFill().stroke(0).strokeWeight(1);
+    noFill().stroke(200).strokeWeight(1);
     rect(margin*2 + 1, margin*2 + tabHeight + shifterHt + 1, wid - margin*4 - 2, wid - margin*4 - tabHeight - shifterHt - 2);
-
+    stroke(0);
     translate(margin*2, margin*2 + tabHeight + shifterHt);
     strokeWeight(2);
 
@@ -519,6 +519,10 @@ function showStatusBar(){
     val="unlimited";
   if(sel)
     text(sel+" has "+val+" point"+((pts>1||pts<0)?'s ':' ')+'left', 10, prop.statusBarY + prop.statusBarH/2);
+  if (mouseX > 0 && mouseX < width && mouseY > prop.canvasY+1 && mouseY < prop.canvasY+prop.canvasH-1) {
+    textAlign(RIGHT, CENTER);
+    text("Pen : "+mouseX+', '+(mouseY-80), width-10, prop.statusBarY + prop.statusBarH/2);
+  }
   pop();
 }
 
