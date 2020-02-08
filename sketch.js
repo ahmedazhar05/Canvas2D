@@ -15,6 +15,7 @@ let drawable; //determines if user can draw on canvas or not
 let desc; //stores description of tools
 let pos;  //stores regex values
 let drag; //to store dialog box's drag offsets w.r.t. mouseX and mouseY
+let demo; //stores demo shapes values
 
 function preload(){
   font = loadFont('Helvetica.ttf');
@@ -38,7 +39,14 @@ function setup() {
 
   drag = {};
 
-  saved=0;
+  saved = 0;
+
+  demo = {
+    k : 0,
+    dx : 0,
+    dy : 0,
+    rad : 0,
+  };
 
   //stores all the user created shapes
   shapes = [];
@@ -49,7 +57,7 @@ function setup() {
     "Show Grid" : {enabled : false, func : 'showGrid'},
     "Show Ruler" : {enabled : false, func : 'showRuler'},
     "Show Annotation" : {enabled : true, func : 'showAnnotation'},
-    //"Help" : {enabled : true, func : 'showHelp', param : [1]},
+    "Help" : {enabled : false, func : 'showHelp', param : [1, 0]},
     "Export As" : {enabled : false, func : 'exportFile', param : ['|']},//prestores blinking line
   };
 
@@ -94,56 +102,6 @@ function setup() {
   textAlign(CENTER, CENTER);
   textSize(15);
   noStroke();
-
-  desc = '';
-  pos = {};
-  fetch('./Desc.txt')
-  .then(response => response.text())
-  .then(data => {
-
-    const wid=500;
-    const margin=20;
-    const innerMargin=20;
-
-    data = data.trim()+'\n';
-    let breaks=[];
-    [...data.matchAll(/[\s\n]/gm)].forEach(val => breaks.push(val.index));
-    let start=0;
-    let f=font;
-    for(let stop of breaks){
-      let sub = data.substring(start, stop+1);
-      if(data[stop] == '\n'){
-        desc += sub;
-        start = stop + 1;
-      } else if(f.textBounds(sub, 0, 0, 18).w > wid-(margin+innerMargin+((f==font)?0:10))*2){
-        desc += sub.substring(0, sub.lastIndexOf(' ', sub.length - 2))+'\n';
-        sub = "";
-        start = data.lastIndexOf(' ', stop-1)+1;
-      }
-    }
-
-    console.log(desc);
-
-    let regex = [
-      [...desc.matchAll(/(?:\*\*)([^\s][\w,.><"':;}{()\-+/\s&^%$#@!~`]*[^\s])(?:\*\*)/gm)],//bolded string
-      [...desc.matchAll(/[^*\n]\*([\w\s.,]+)\*(?!\*)/gm)],//italisized string
-      [...desc.matchAll(/^[\t\s]*\d\d?\.[\n\s](.+)/gm)],//numbered lists
-      [...desc.matchAll(/^([\t\s]*)\-(?=\s.+)/gm)],//bulleted lists
-      [...desc.matchAll(/^(?:#{1,6}\s)(.+)(?:\n*)|^(.+)(?:\n[-=]\s*\n)/gm)],//heading
-      [...desc.matchAll(/^`{3}/gm)],//code segment start/end
-      [...desc.matchAll(/\(([^\)]*[,\w]*)\)/gm)],//function parameters
-      [...desc.matchAll(/[a-zA-z0-9]+(?=\.[a-zA-Z0-9])/gm)],//object variable
-      [...desc.matchAll(/\w+(?=\()/gm)],//function name
-      [...desc.matchAll(/\n/gm)],//newline '\n'
-    ];
-
-    for(let i=0;i<regex.length|0;i++){
-      for(let j=0;j<regex[i].length|0;j++){
-        if(typeof(pos[regex[i][j].index]) == 'undefined')
-          pos[regex[i][j].index]={i, r: regex[i][j]};
-      }
-    }
-  });
 }
 
 function draw() {
@@ -327,26 +285,26 @@ function exportFile(name){
   This Function Show guide on using various drawing tools.
   parameter `ind` denotes the index of tab that is selected in help dialog box
 */
-function showHelp(ind){
+function showHelp(ind, t){
   drawable=false;
-  const helps=["Guide", "Shortcuts", "About"];
+  const helps=["Demo", "Shortcuts", "About"];
+  const wid = 500;
+  const margin = 20;
+  const tabHeight = 30;
+  const tabs = helps.length;
+  const space = (wid - 20*2)/tabs;
   --ind;
   push();
   rectMode(CORNER);
   textAlign(CENTER, CENTER);
   textSize(22);
   stroke(0,100).strokeWeight(10);
-  const wid=500;
-  const margin = 20;
-  const tabHeight = 30;
   rect(prop.help.x-(wid-6)/2+8, prop.help.y-(wid-6)/2+8 -40, wid - 6, wid - 6 + 40);//box shadow
-  const tabs = helps.length;
-  stroke(0, 55, 200).strokeWeight(2).fill(135, 234, 138);
+  stroke(0, 55, 200).strokeWeight(2).fill(255);
   rect(prop.help.x - wid/2, prop.help.y - wid/2 - 40, wid, wid + 40);//Rectangle Dialog Box
   fill(0).stroke(0,100);
   textSize(25);
   text("H E L P", prop.help.x, prop.help.y - wid/2 - ((margin + 40)/2 - margin));
-  const space = (wid - 20*2)/tabs;
   stroke(0);
   textSize(18);
   translate(prop.help.x - wid/2, prop.help.y - wid/2);
@@ -362,109 +320,96 @@ function showHelp(ind){
   }
   fill(255).stroke(0);
   rect(margin, margin + tabHeight, wid - margin*2, wid - margin*2 - tabHeight);
-  stroke(255).strokeCap(SQUARE);
+  stroke(255).strokeCap(SQUARE).strokeWeight(3);
   line(ind*space + margin + 1, margin + tabHeight, ind*space + margin + space - 1, margin + 30);
 
-  //Content
-  textAlign(LEFT, TOP);
-  textSize(18);
-  fill(0).noStroke();
-  let posY = margin + margin + 18;
-  let posX = margin + margin;
-  let indent = 0;
-  let start = 0;
-  let end = desc.length-1;
-  let x = -1;
-  // for(let p in pos){
-  for(let iter = 1; iter < Object.keys(pos).length; ++iter){
-    const p = int(Object.keys(pos)[iter]); //'pos' key i.e. regex's index
-    if(pos[end] < pos[p]){
-      p = end;
-      --iter;
+  //DEMO
+  textSize(30);
+  textAlign(CENTER, CENTER);
+  const shifterWd = 40;
+  const shifterHt = textSize()+10;
+  fill(220).noStroke();//.stroke(0).strokeWeight(1);
+  //left shifter button
+  rect(margin*2, margin*2 + tabHeight, shifterWd, shifterHt);
+  // //right shifter button
+  rect(wid - margin*2 - shifterWd, margin*2 + tabHeight, shifterWd, shifterHt);
+
+  fill(230);
+  rect(margin*2+shifterWd+1, margin*2 + tabHeight, wid - margin*4 - shifterWd*2 -2, shifterHt);
+
+  fill(0).textStyle(BOLD);
+  text(Object.keys(tools)[t], wid/2, margin*2+tabHeight+shifterHt/2);
+  textStyle(NORMAL).textSize(20);
+  text("<", margin*2 + shifterWd/2, margin*2 + tabHeight + shifterHt/2);
+  text(">", wid - margin*2 - shifterWd/2, margin*2 + tabHeight + shifterHt/2);
+  noFill().stroke(0).strokeWeight(1);
+  rect(margin*2 + 1, margin*2 + tabHeight + shifterHt + 1, wid - margin*4 - 2, wid - margin*4 - tabHeight - shifterHt - 2);
+
+  translate(margin*2, margin*2 + tabHeight + shifterHt);
+  strokeWeight(2);
+  if(t == 0){
+    if(round(demo.dx) == round(demo.vtx[demo.k][0]) && round(demo.dy) == round(demo.vtx[demo.k][1])){
+      ++demo.k;
+      if(demo.k == Object.keys(demo.vtx).length){
+        demo.k=0;
+        demo.pause = 20;
+      }
+      demo.rad = (demo.k==0 || demo.k==3 || demo.k==11 || demo.k==25)? 0:5;
+    } else if(demo.pause < 1){
+      demo.dx = lerp(demo.dx, demo.vtx[demo.k][0], 0.5);
+      demo.dy = lerp(demo.dy, demo.vtx[demo.k][1], 0.5);
+    } else {
+      --demo.pause;
     }
-    let str = desc.substring(start, p).trim();
-    switch((typeof pos[start] == 'undefined')?-1:pos[start].i){
-      case 0://bolded string
-        textStyle(BOLD);
-        str = pos[start].r[1].split('\n')[++x]+' ';
-        text(str, posX, posY);
-        posX = margin + margin;
-        if(x == pos[start].r[1].split('\n').length - 1){
-          x = -1;
-          start = start + pos[start].r[0].length;
-          if (desc[p] != '\n')
-            posX += font.textBounds(str, 0, 0, 18).w;
-        }
-        textStyle(NORMAL);
-        break;
-      case 1://italisized string
-        textStyle(ITALIC);
-        str = pos[start].r[1].split('\n')[++x]+' ';
-        text(str, posX, posY);
-        posX = margin + margin;
-        if(x == pos[start].r[1].split('\n').length - 1){
-          x = -1;
-          start = start + pos[start].r[0].length;
-          if (desc[p] != '\n')
-            posX += font.textBounds(str, 0, 0, 18).w;
-        }
-        textStyle(NORMAL);
-        break;
-      case 2://numbered lists
-        if (!indent)
-          indent = 10;
-        text(str+'\t', posX + indent, posY);
-        posX += font.textBounds(str+'\t\t\t', 0, 0, 18).w;
-        start = p;
-        // end = p + pos[start].r[1].length;
-        break;
-      case 3://bulleted lists
-        if (!indent)
-          indent = 10;
-        circle(posX + indent/2, posY + 8, 7);
-        posX += font.textBounds('\t\t\t', 0, 0, 18).w;
-        start = p;
-        // end = p + pos[start].r[1].length;
-        break;
-      case 4://heading
-        let ix = 1;
-        if(pos[start].r[0][0] == '#')
-          ix = pos[start].r[0].indexOf(' ');
-        else {
-          let chr = desc[int(Object.keys(pos)[iter])+1];
-          ix = (chr=='-')?2:1;
-          ++iter;
-        }
-        textSize(50-20*log(ix));
-        textStyle(BOLD);
-        text((pos[start].r[1])?pos[start].r[1]:pos[start].r[2], posX, posY);
-        posY += textSize();
-        textSize(18);
-        textStyle(NORMAL);
-        start = int(Object.keys(pos)[iter]);
-        break;
-      case 5://code segment start/end
-        break;
-      case 6://function parameters
-        break;
-      case 7://object variable
-        break;
-      case 8://function name
-        break;
-      case 9://newlines
-        indent = 0;
-        posX = margin + margin;
-      default:
-        text(str, posX, posY);
-        start = p;
-        if(desc[p] != '\n')
-          posX += font.textBounds(str+' ', 0, 0, 18).w;
-        else {
-          posX = margin + margin;
-          posY += 18;
-        }
+    const bks=[0,3,11,25,29];
+    for(let j=0; j<bks.length-1; j++){
+      beginShape();
+      for(let i=bks[j]; i<bks[j+1] && i<demo.k; i++)
+        vertex(demo.vtx[i][0], demo.vtx[i][1]);
+      endShape();
     }
+    demoMouse(demo.dx, demo.dy, demo.rad);
+  } else {
+    if(round(demo.dx) == round(demo.vtx[demo.k][0]) && round(demo.dy) == round(demo.vtx[demo.k][1]) && round(demo.rad) < 5){
+      demo.rad = lerp(demo.rad, 5, 0.3);
+    } else if(demo.rad > 5-1){
+      ++demo.k;
+      if(demo.k == Object.keys(demo.vtx).length){
+        demo.k = 0;
+        demo.pause = 60;
+        window[Object.keys(tools)[t].toLowerCase()].apply(this, demo.pmt);
+      }
+      demo.rad = 0;
+    } else if(demo.pause < 1){
+      demo.dx = lerp(demo.dx, demo.vtx[demo.k][0], 0.1);
+      demo.dy = lerp(demo.dy, demo.vtx[demo.k][1], 0.1);
+    } else {
+      window[Object.keys(tools)[t].toLowerCase()].apply(this, demo.pmt);
+      --demo.pause;
+    }
+    demoMouse(demo.dx, demo.dy, demo.rad);
   }
+  pop();
+}
+
+function demoMouse(x, y, r) {
+  push();
+  inc=1.5;
+  translate(x, y);
+  if(r != 0){
+    noFill().stroke(255, 0, 0).strokeWeight(2);
+    circle(0, 0, r*2);
+  }
+  fill(255).stroke(0).strokeWeight(1);
+  beginShape();
+  vertex(8*inc,17*inc);//bottom right stick out
+  vertex(6*inc,13*inc);//botton right inner
+  vertex(11*inc,13*inc);//arrow head right out
+  vertex(0,0);//action point
+  vertex(0,17*inc);//arrow head left out
+  vertex(3.5*inc,14*inc);//bottom left inner
+  vertex(5*inc,18.5*inc);//bottom left stick out
+  endShape(CLOSE);
   pop();
 }
 
@@ -478,10 +423,10 @@ function showHelp(ind){
   bool=true will add the parameter(either temp or mag) to params[].
   bool=false will not.
 */
-function makeParam(bool){
+function makeParam(x, y, bool){
   if (!drawable)
     return;
-  temp = [mouseX, mouseY]; //stores the mouse pointer clicked/released coordinate
+  temp = [x, y]; //stores the mouse pointer clicked/released coordinate
   mag = [];
   //checks and sets magnitude parameter for particular point of the shape
   switch(sel){
@@ -585,6 +530,9 @@ function showAnnotation(){
 
 function mousePressed(){
   if(options["Export As"].enabled && mouseX >= prop.export.x - 375/2 && mouseX <= prop.export.x + 375/2 && mouseY >= prop.export.y - 175/2 && mouseY <= prop.export.y + 175/2){
+    const widH = 375/2;
+    const heiH = 175/2;
+    const gap = 15;
     //when save button from export dialog box is clicked
     if(mouseX>=prop.export.x+50 && mouseX<=prop.export.x+150 && mouseY>=prop.export.y+32.5 && mouseY<=prop.export.y+67.5 && options["Export As"].param[0].length-1){
       let content = ["//Generated by Canvas2D at https://ahmedazhar05.github.io/Canvas2D\n","noFill();","rectMode(CORNERS);","ellipseMode(CENTER);\n"];
@@ -612,7 +560,7 @@ function mousePressed(){
       15  : Gap
     */
     else if (mouseY <= prop.export.y - 35)
-      drag = {pr: (vx, vy)=>{prop.export = {x: constrain(vx, 375/2 + 15, width - 375/2 - 15), y: constrain(vy, 175/2 + 15, height - 175/2 - 15)}}, dx: mouseX - prop.export.x, dy: prop.export.y - mouseY};
+      drag = {pr: (vx, vy)=>{prop.export = {x: constrain(vx, widH + gap, width - widH - gap), y: constrain(vy, heiH + gap, height - heiH - gap)}}, dx: mouseX - prop.export.x, dy: prop.export.y - mouseY};
   }
   /*
     500 : Help Dialog Box width & height,
@@ -621,13 +569,53 @@ function mousePressed(){
     40  : 'HELP' title height
     15  : Gap
   */
-  /*else if(options["Help"].enabled && mouseX >= prop.help.x - 500/2 && mouseX <= prop.help.x + 500/2 && mouseY >= prop.help.y - 500/2 - 40 && mouseY <= prop.help.y + 500/2){
+  else if(options["Help"].enabled && mouseX >= prop.help.x - 500/2 && mouseX <= prop.help.x + 500/2 && mouseY >= prop.help.y - 500/2 - 40 && mouseY <= prop.help.y + 500/2){
+    const widH = 500/2;
+    const margin = 20;
+    const gap = 15;
+    const tabHeight = 30;
+    const shifterHt = 30;
+    const shifterWd = 40;
     //help dialog drag feature enabler
-    if (mouseY <= prop.help.y - 500/2)
-      drag = {pr: (vx, vy)=>{prop.help = {x: constrain(vx, 500/2+15, width-500/2-15), y: constrain(vy, 500/2+40+15, height-500/2-15)}}, dx: mouseX - prop.help.x, dy: prop.help.y - mouseY};
-    else if (mouseX >= (prop.help.x - 500/2 + 20) && mouseX <= (prop.help.x + 500/2 - 20) && mouseY >= (prop.help.y - 500/2 + 20) && mouseY <= (prop.help.y - 500/2 + 20)+30)
-      options["Help"].param[0] = int((mouseX - (prop.help.x - 500/2 + 20))/((500 - 20 - 20)/3/*no of tabs in help dialog box/)) + 1;
-  }*/
+    if (mouseY <= prop.help.y - widH)
+      drag = {pr: (vx, vy)=>{prop.help = {x: constrain(vx, widH+gap, width-widH-gap), y: constrain(vy, widH+40/*'HELP' title height*/+gap, height-widH-gap)}}, dx: mouseX - prop.help.x, dy: prop.help.y - mouseY};
+    else if (mouseX >= (prop.help.x - widH + margin) && mouseX <= (prop.help.x + widH - margin) && mouseY >= (prop.help.y - widH + margin) && mouseY <= (prop.help.y - widH + margin)+tabHeight)
+      options["Help"].param[0] = int((mouseX - (prop.help.x - widH + margin))/((widH*2 - margin*2)/3/*no of tabs in help dialog box*/)) + 1;
+    else if(options["Help"].param[0]==1 && mouseY >= (prop.help.y - widH + margin*2 + tabHeight) && mouseY <= (prop.help.y - widH + margin*2 + tabHeight + shifterHt)){
+      if(mouseX >= (prop.help.x - widH + margin*2) && mouseX <= (prop.help.x - widH + margin*2 + shifterWd))
+        options["Help"].param[1] -= 1;
+      else if(mouseX >= (prop.help.x + widH - margin*2 - shifterWd) && mouseX <= (prop.help.x + widH - margin*2))
+        options["Help"].param[1] += 1;
+      options["Help"].param[1] = (options["Help"].param[1] + Object.keys(tools).length) % Object.keys(tools).length;
+      switch(options["Help"].param[1]){
+        case 0:
+          demo = {vtx:[[31, 68],[38, 114],[40, 131],[30, 67],[45, 66],[47, 66],[53, 75],[53, 84],[48, 90],[32, 100],[24, 101],[68, 37],[67, 57],[69, 61],[80, 53],[87, 50],[89, 50],[92, 52],[95, 60],[95, 66],[95, 72],[89, 84],[79, 91],[66, 92],[64, 90],[68, 37],[86, 34],[97, 33],[106, 31]],};
+          break;
+        case 1:
+          demo = {vtx:[[29, 29],[82, 22],[62, 115],[118, 122]], pmt:[29, 29, 82, 22, 62, 115, 118, 122]};
+          break;
+        case 2:
+          break;
+        case 3:
+          break;
+        case 4:
+          break;
+        case 5:
+          break;
+        case 6:
+          break;
+        case 7:
+          break;
+        case 8:
+          break;
+      }
+      demo.dx = demo.vtx[0][0]-10;
+      demo.dy = demo.vtx[0][1]-10;
+      demo.k = 0;
+      demo.rad = 0;
+      demo.pause = 0;
+    }
+  }
   else {
     //shape tool selection from toolbar
     if(mouseY >= prop.toolBarY && mouseY <= prop.toolBarY + prop.toolBarH){
@@ -648,14 +636,25 @@ function mousePressed(){
     else if(mouseY >= prop.optionsBarY && mouseY <= prop.optionsBarY+prop.optionsBarH){
       let opt = Object.keys(options)[floor(mouseX/prop.optionsGap)];
       options[opt].enabled = !options[opt].enabled;
+      if (options["Help"].enabled){
+        options["Help"].param[1] = 0;
+        demo = {
+          k : 0,
+          rad: 0,
+          vtx:[[31, 68],[38, 114],[40, 131],[30, 67],[45, 66],[47, 66],[53, 75],[53, 84],[48, 90],[32, 100],[24, 101],[68, 37],[67, 57],[69, 61],[80, 53],[87, 50],[89, 50],[92, 52],[95, 60],[95, 66],[95, 72],[89, 84],[79, 91],[66, 92],[64, 90],[68, 37],[86, 34],[97, 33],[106, 31]],
+          dx : 31-10,
+          dy : 68-10,
+          pause : 0,
+        };
+      }
       drawable = true;
     }
     //permanent point drawn when pencil tool is selected and clicked on canvas
     else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil" && drawable)
-      makeParam(true);
+      makeParam(mouseX, mouseY, true);
     //temporary point added when shape tool is selected and clicked on canvas
     else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && pts == 1 && drawable)
-      makeParam(false);
+      makeParam(mouseX, mouseY, false);
   }
 }
 
@@ -663,7 +662,7 @@ function mouseReleased(){
   drag = {};
   cursor(ARROW);
   if(mouseX >= 0 && mouseX <= prop.width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil" && drawable){
-    makeParam(false);
+    makeParam(mouseX, mouseY, false);
     shapes.push(["Pencil"].concat(drawn));
     pts = 0;
     if(options["Non Stop"].enabled){
@@ -677,7 +676,7 @@ function mouseReleased(){
   //permanent addtion of points in drawn[]
   //addition of params[] to shapes when object's final point is created
   else if(mouseX >= 0 && mouseX <= prop.width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && drawable){
-    makeParam(true);
+    makeParam(mouseX, mouseY, true);
     --pts;
     ann = (tools[sel])[pts-1];
     if(!pts){
@@ -697,10 +696,10 @@ function mouseReleased(){
 function mouseDragged(){
   if(sel && drawable){
     if(mouseX >= 0 && mouseX <= width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil")
-      makeParam(true);
+      makeParam(mouseX, mouseY, true);
     //preview shape when last point of the object is being drawn/dragged by temporarily adding point into drawn
     else if(mouseX >= 0 && mouseX <= width && mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && pts == 1)
-      makeParam(false);
+      makeParam(mouseX, mouseY, false);
   }
   else if(typeof drag.pr != 'undefined'/* && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height*/){
     drag.pr(mouseX - drag.dx, mouseY + drag.dy);
