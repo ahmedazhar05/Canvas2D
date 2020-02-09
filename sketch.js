@@ -59,6 +59,7 @@ function setup() {
     "Show Annotation" : {enabled : true, func : 'showAnnotation'},
     "Help" : {enabled : false, func : 'showHelp', param : [1, 0]},
     "Export As" : {enabled : false, func : 'exportFile', param : ['|']},//prestores blinking line
+    "Fullscreen" : {enabled : false, func : 'voidfunc'},
   };
 
   //stores all the point coordinate description to help user
@@ -75,6 +76,7 @@ function setup() {
   };
 
   //stores canvas properties
+  createCanvas(windowWidth, windowHeight);
   prop = {
     width : windowWidth - 2,
     toolBarH : 40,
@@ -83,7 +85,6 @@ function setup() {
     optionsBarH : 40,
   };
   prop.canvasH = windowHeight - prop.toolBarH - prop.statusBarH - prop.optionsBarH;
-  createCanvas(prop.width + 2, prop.toolBarH + prop.statusBarH + prop.canvasH + prop.optionsBarH);
   prop.optionsBarY = prop.toolBarY + prop.toolBarH;
   prop.canvasY = prop.optionsBarH + prop.optionsBarY;
   prop.statusBarY = prop.canvasY + prop.canvasH;
@@ -648,6 +649,8 @@ function mousePressed(){
     else if(mouseY >= prop.optionsBarY && mouseY <= prop.optionsBarY+prop.optionsBarH){
       let opt = Object.keys(options)[floor(mouseX/prop.optionsGap)];
       options[opt].enabled = !options[opt].enabled;
+      if(opt=="Fullscreen")
+        fullscreen(options['Fullscreen'].enabled);
       if (options["Help"].enabled){
         options["Help"].param[1] = 7;
         demo = {
@@ -764,3 +767,15 @@ window.addEventListener('beforeunload', (event) => {
     event.returnValue = false;
   }
 });
+
+function windowResized(){
+  resizeCanvas(windowWidth, windowHeight);
+  prop.width = windowWidth - 2;
+  prop.canvasH = windowHeight - prop.toolBarH - prop.statusBarH - prop.optionsBarH;
+  prop.statusBarY = prop.canvasY + prop.canvasH;
+  prop.toolGap = width / Object.keys(tools).length;
+  prop.optionsGap = width / Object.keys(options).length;
+  prop.help.x = prop.export.x = width/2;
+  prop.help.y = prop.export.y = height/2;
+  options["Fullscreen"].enabled = fullscreen();
+}
