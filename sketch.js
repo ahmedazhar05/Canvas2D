@@ -60,6 +60,7 @@ function setup() {
     "Help" : {enabled : false, func : 'showHelp', param : [1, 0]},
     "Export As" : {enabled : false, func : 'exportFile', param : ['|']},//prestores blinking line
     "Fullscreen" : {enabled : false, func : 'voidfunc'},
+    "Clear Screen" : {enabled : false, func : 'clearScreen'},
   };
 
   //stores all the point coordinate description to help user
@@ -544,6 +545,7 @@ function showAnnotation(){
 }
 
 function mousePressed(){
+  //if the Export As Option is on and mouse is inside the diaolog box
   if(options["Export As"].enabled && mouseX >= prop.export.x - 375/2 && mouseX <= prop.export.x + 375/2 && mouseY >= prop.export.y - 175/2 && mouseY <= prop.export.y + 175/2){
     const widH = 375/2;
     const heiH = 175/2;
@@ -646,9 +648,19 @@ function mousePressed(){
       params = drawn = [];
     }
     //option selection from optionsbar and toggling its enability
+    //when mouse is in the options area
     else if(mouseY >= prop.optionsBarY && mouseY <= prop.optionsBarY+prop.optionsBarH){
       let opt = Object.keys(options)[floor(mouseX/prop.optionsGap)];
       options[opt].enabled = !options[opt].enabled;
+      // if the help option is clicked when already the Export As option was on
+      if(opt == "Help"){
+        options["Export As"].enabled = false;
+      }
+        
+      // if the Export As option is clicked when already the Help option was on
+      if(opt == "Export As"){
+        options["Help"].enabled = false;
+      }
       if(opt=="Fullscreen")
         fullscreen(options['Fullscreen'].enabled);
       if (options["Help"].enabled){
@@ -665,12 +677,20 @@ function mousePressed(){
       }
       drawable = true;
     }
+    if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH){
+      if(options["Export As"].enabled)
+        options["Export As"].enabled = false;
+      if(options["Help"].enabled)
+        options["Help"].enabled = false;
+        drawable = true;
+    }   
     //permanent point drawn when pencil tool is selected and clicked on canvas
     else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel=="Pencil" && drawable)
       makeParam(mouseX, mouseY, true);
     //temporary point added when shape tool is selected and clicked on canvas
     else if(mouseY >= prop.canvasY && mouseY <= prop.canvasY+prop.canvasH && sel && pts == 1 && drawable)
       makeParam(mouseX, mouseY, false);
+      
   }
 }
 
@@ -725,6 +745,13 @@ function mouseDragged(){
 
 function voidfunc(){
   null;
+}
+
+function clearScreen(){
+  if(options["Clear Screen"].enabled){
+    shapes = [];
+    options["Clear Screen"].enabled = false;
+  }
 }
 
 function keyPressed(){
